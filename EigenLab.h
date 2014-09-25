@@ -259,6 +259,17 @@ namespace EigenLab
 	template <typename Derived>
 	void Parser<Derived>::splitEquationIntoChunks(const std::string & expression, ChunkArray & chunks, std::string & code)
 	{
+		static std::map<std::string, ChunkArray> cached_chunks;
+		if (cached_chunks.count(expression) > 0) {
+			chunks = cached_chunks.at(expression);
+#ifdef DEBUG
+#ifdef EIGENLAB_DEBUG
+			std::cout << "CACHED CHUNKS: "; printChunks(chunks); std::cout << std::endl;
+#endif
+#endif
+			return;
+		}
+
 		for(std::string::const_iterator it = expression.begin(); it != expression.end();)
 		{
 			int prevType = (chunks.size() ? chunks.back().type : -1);
@@ -388,6 +399,7 @@ namespace EigenLab
 		std::cout << "CODE: " << code << std::endl;
 #endif
 #endif
+		cached_chunks[expression] = chunks;
 	}
 	
 	template <typename Derived>
