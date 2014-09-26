@@ -488,14 +488,14 @@ namespace EigenLab
 			ncols = 0;
 			for(size_t j = 0; j < cols.size(); j++) {
 				submatrix = eval(cols[j]);
-				if(j > 0 && submatrix.matrix().cols() != nrows)
+				if(j > 0 && size_t(submatrix.matrix().cols()) != nrows)
 					throw std::runtime_error("Invalid matrix definition '[" + str + "]'. Successive column entries '" + cols[int(j) - 1] + "' and '" + cols[j] + "' do not have the same number of rows.");
 				nrows = submatrix.matrix().rows();
 				ncols += submatrix.matrix().cols();
 				temp.resize(row0 + submatrix.matrix().rows());
-				for(size_t row = 0; row < submatrix.matrix().rows(); row++) {
+				for(size_t row = 0; row < size_t(submatrix.matrix().rows()); row++) {
 					temp[row0 + row].resize(col0 + submatrix.matrix().cols());
-					for(size_t col = 0; col < submatrix.matrix().cols(); col++)
+					for(size_t col = 0; col < size_t(submatrix.matrix().cols()); col++)
 						temp[row0 + row][col0 + col] = submatrix.matrix()(row, col);
 				}
 				col0 += submatrix.matrix().cols();
@@ -851,16 +851,16 @@ namespace EigenLab
 				} else if(lhs->value.matrix().size() == 1) {
 					typename Derived::Scalar temp = lhs->value.matrix()(0, 0);
 					lhs->value.local().resize(rhs->value.matrix().rows(), rhs->value.matrix().cols());
-					for(size_t row = 0; row < rhs->value.matrix().rows(); row++) {
-						for(size_t col = 0; col < rhs->value.matrix().cols(); col++)
+					for(size_t row = 0; row < size_t(rhs->value.matrix().rows()); row++) {
+						for(size_t col = 0; col < size_t(rhs->value.matrix().cols()); col++)
 							lhs->value.local()(row, col) = pow(temp, rhs->value.matrix()(row, col));
 					}
 					lhs->value.mapLocal();
 					lhs->type = VALUE;
 				} else if(op->field == ".^" && lhs->value.matrix().rows() == rhs->value.matrix().rows() && lhs->value.matrix().cols() == rhs->value.matrix().cols()) {
 					lhs->value.local().resize(rhs->value.matrix().rows(), rhs->value.matrix().cols());
-					for(size_t row = 0; row < rhs->value.matrix().rows(); row++) {
-						for(size_t col = 0; col < rhs->value.matrix().cols(); col++)
+					for(size_t row = 0; row < size_t(rhs->value.matrix().rows()); row++) {
+						for(size_t col = 0; col < size_t(rhs->value.matrix().cols()); col++)
 							lhs->value.local()(row, col) = pow(lhs->value.matrix()(row, col), rhs->value.matrix()(row, col));
 					}
 					lhs->value.mapLocal();
