@@ -424,3 +424,7 @@ Coefficient with the maximum absolute value: `absmax(A,dim)`
 Mean coefficient: `mean(A,dim)`  
 Sum of coefficients: `sum(A,dim)`  
 Product of coefficients: `prod(A,dim)`  
+
+### Caching expressions.
+---
+If you need to re-evaluate the same expression multiple times, you can optionally turn on expression caching to store the parsed expression and reuse it the next time rather than reparsing it from scratch. This will speed up subsequent expression evaluations. !!! WARNING !!! If your parsed expressions contain large matrices that are stored locally within the parser (i.e. not variable names referencing shared data), then your cached expressions can eat up a lot of memory. Thus, you can turn caching on/off for each parser instance using `setCacheExpressions(bool)` and clear your current cach with `clearCachedExpressions()`. `cacheExpressions()` will return a boolean indicating your current caching status.
