@@ -428,3 +428,26 @@ Product of coefficients: `prod(A,dim)`
 ### Caching expressions.
 ---
 If you need to re-evaluate the same expression multiple times, you can optionally turn on expression caching to store the parsed expression and reuse it the next time rather than reparsing it from scratch. This will speed up subsequent expression evaluations. !!! WARNING !!! If your parsed expressions contain large matrices that are stored locally within the parser (i.e. not variable names referencing shared data), then your cached expressions can eat up a lot of memory. Thus, you can turn caching on/off for each parser instance using `setCacheExpressions(bool)` and clear your current cach with `clearCachedExpressions()`. `cacheExpressions()` will return a boolean indicating your current caching status.
+
+
+
+Version History
+===
+
+### 0.9.0
+
+*** August 26, 2014 ***
+
+Initial beta release.
+
+*** October 17, 2014 ***
+
+Added the `absmax()` function, which was missing in the previous version.
+
+Fixed submatrix index ranges for variables that used either the `end` keyword or the `:` symbol to denote the entire range. These keywords were previously not interpreted correctly for variables.
+
+Added the `test()` function for debugging. This function is meant to test all functionality in EigenLab as a quick check that everything is OK.
+
+Thanks to Ilja Honkonen <ilja.j.honkonen@nasa.gov> for adding expression caching to speed performance when re-evaluating the same expression multiple times, and also for suggesting several type casts to remove type comparison warning messages.
+
+Made expression caching optional in case one wants to avoid caching large matrices.
