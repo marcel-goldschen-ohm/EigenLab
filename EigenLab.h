@@ -134,6 +134,8 @@ namespace EigenLab
 		};
 		enum ChunkType { VALUE = 0, VARIABLE, OPERATOR, FUNCTION };
 		typedef std::vector<Chunk> ChunkArray;
+		bool mCacheChunkedExpressions;
+		std::map<std::string, ChunkArray> mCachedChunkedExpressions;
 		
 	public:
 		// Access to named variables.
@@ -147,7 +149,13 @@ namespace EigenLab
 		// Delete a variable.
 		inline void clearVar(const std::string & name) { typename ValueMap::iterator it = mVariables.find(name); if(it != mVariables.end()) mVariables.erase(it); }
 		
+		// Expression chunk caching.
+		inline bool cacheExpressions() const { return mCacheChunkedExpressions; }
+		inline void setCacheExpressions(bool b) { mCacheChunkedExpressions = b; }
+		inline void clearCachedExpressions() { mCachedChunkedExpressions.clear(); }
+		
 		Parser();
+		~Parser() { clearCachedExpressions(); }
 		
 		// Evaluate an expression and return the result in a value wrapper.
 		Value<Derived> eval(const std::string & expression);
@@ -193,7 +201,10 @@ namespace EigenLab
 	// Function definitions.
 	//----------------------------------------
 	template <typename Derived>
-	Parser<Derived>::Parser() : mOperators1("+-*/^()[]="), mOperators2(".+.-.*./.^")
+	Parser<Derived>::Parser() :
+		mCacheChunkedExpressions(false),
+		mOperators1("+-*/^()[]="),
+		mOperators2(".+.-.*./.^")
 	{
 		// Coefficient-wise operations.
 		mFunctions.push_back("abs");
@@ -259,15 +270,16 @@ namespace EigenLab
 	template <typename Derived>
 	void Parser<Derived>::splitEquationIntoChunks(const std::string & expression, ChunkArray & chunks, std::string & code)
 	{
-		static std::map<std::string, ChunkArray> cached_chunks;
-		if (cached_chunks.count(expression) > 0) {
-			chunks = cached_chunks.at(expression);
+		if(cacheExpressions()) {
+			if(mCachedChunkedExpressions.count(expression) > 0) {
+				chunks = mCachedChunkedExpressions.at(expression);
 #ifdef DEBUG
-#ifdef EIGENLAB_DEBUG
-			std::cout << "CACHED CHUNKS: "; printChunks(chunks); std::cout << std::endl;
+#	ifdef EIGENLAB_DEBUG
+				std::cout << "CACHED CHUNKS: "; printChunks(chunks); std::cout << std::endl;
+#	endif
 #endif
-#endif
-			return;
+				return;
+			}
 		}
 
 		for(std::string::const_iterator it = expression.begin(); it != expression.end();)
@@ -399,7 +411,8 @@ namespace EigenLab
 		std::cout << "CODE: " << code << std::endl;
 #endif
 #endif
-		cached_chunks[expression] = chunks;
+		if(cacheExpressions())
+			mCachedChunkedExpressions[expression] = chunks;
 	}
 	
 	template <typename Derived>
