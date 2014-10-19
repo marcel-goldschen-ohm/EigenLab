@@ -1,6 +1,6 @@
 EigenLab
 ===
-C++ header only library for parsing/evaluating matrix math equations which are unknown until run time (e.g. user input) in a format similar to MATLAB (http://www.mathworks.com/products/matlab). Variables can be defined via the parsed equations as in MATLAB, or alternatively mapped to preallocated data. Matrix math is performed using Eigen (http://eigen.tuxfamily.org). Supports basic matrix operations, matrix reductions, submatrix indexing as in MATLAB (except indices are 0 based), coefficient-wise operations and coefficient-wise function evaluation. This allows the user to evaluate matrix math equations in an interactive fashion like in MATLAB, or, for example, to fit a data set using an arbitrary function defined by the user at run time. Finally, EigenLab's interface is incredibly simple and easy to use. Check out the Quick Start Examples seciton and see below for a taste of what EigenLab is capable of.
+C++ header only library for parsing/evaluating matrix math equations which are unknown until run time (e.g. user input) in a format similar to MATLAB <http://www.mathworks.com/products/matlab>. Variables can be defined via the parsed equations as in MATLAB, or alternatively mapped to preallocated data. Matrix math is performed using Eigen <http://eigen.tuxfamily.org>. Supports basic matrix operations, matrix reductions, submatrix indexing as in MATLAB (except indices are 0 based), coefficient-wise operations and coefficient-wise function evaluation. This allows the user to evaluate matrix math equations in an interactive fashion like in MATLAB, or, for example, to fit a data set using an arbitrary function defined by the user at run time. Finally, EigenLab's interface is incredibly simple and easy to use. Check out the Quick Start Examples seciton and see below for a taste of what EigenLab is capable of.
 
     EigenLab::ParserXd parser;
     EigenLab::ValueXd result;
@@ -20,7 +20,7 @@ C++ header only library for parsing/evaluating matrix math equations which are u
     std::cout << myData << std::endl;
 
 Author: Dr. Marcel Paz Goldschen-Ohm  
-Email:  marcel.goldschen@gmail.com   
+Email:  <marcel.goldschen@gmail.com>   
 License: MIT  
 Copyright (c) 2014 Dr. Marcel Paz Goldschen-Ohm
 
@@ -31,12 +31,14 @@ When you need to evaluate a previously unknown matrix math equation that is inpu
 When you are evaluating a math equation that is known at compile time.
 
 ### How efficient is EigenLab?
-EigenLab uses Eigen (http://eigen.tuxfamily.org) for all matrix operations. **However, in its current state, EigenLab evaluates each individual operation within an equation sequentially, and therefore does NOT take advantage of Eigen's expression templates, which results in some wasteful temporary copies of matrix data.** I have not attempted to wrap my head around Eigen's expression templates, but if anyone knows how they could be applied to EigenLab I would love to hear about it.
+EigenLab uses Eigen <http://eigen.tuxfamily.org> for all matrix operations, and therefore takes advantage of Eigen's incredible matrix math performance. One caveate is that EigenLab evaluates each individual operation within an equation sequentially, and therefore does NOT take advantage of Eigen's expression templates, which results in some wasteful temporary copies of matrix data.
+
+I have not done an extensive test of performance in EigenLab as compared to other parseres such as those mentioned below. However, a simple comparison between EigenLab and muParser <http://muparser.beltoforion.de> is included in the file `SpeedTestEigenLabVsMuParser.cpp` that will probably give you the basic idea. *To summarize, if you can formulate your expression to utilize matrix/array math, then EigenLab is incredibly fast as it can take advantage of Eigen's efficeint matrix math manipulations. On the other hand, if you are forced to reevaluate an expression many times on successive scalar values (e.g. some sort of series expansion), then another parser such as muParser is likely your best choice in terms of speed.*
 
 ### Are there alternatives to EigenLab?
 To my knowledge, there are no native C/C++ alternatives to EigenLab which can both parse matrix math equations and provide an incredibly simple and user friendly interface (i.e. like MATLAB).
 
-If you don't need matrix operations, there are several equation parsers which can evaluate math equations for floating point numbers, such as GNU libmatheval (http://www.gnu.org/software/libmatheval), muParser (http://muparser.beltoforion.de), and MathPresso or DoublePresso (https://github.com/tartakynov/mathpresso). As I have not spent the time to really dig through these libraries, please feel free to correct me if I am wrong about this, or to inform me of another library not listed here.
+If you don't need matrix operations, there are several equation parsers which can evaluate math equations for floating point numbers, such as GNU libmatheval <http://www.gnu.org/software/libmatheval>, muParser <http://muparser.beltoforion.de>, and MathPresso or DoublePresso <https://github.com/tartakynov/mathpresso>. As I have not spent the time to really dig through these libraries, please feel free to correct me if I am wrong about this, or to inform me of another library not listed here.
 
 Finally, it is of course possible to embed in your C++ program an interpreted language such as Python or Lua that could handle any sort of expression evaluation you want.
 
@@ -44,7 +46,7 @@ Finally, it is of course possible to embed in your C++ program an interpreted la
 ---
 All of EigenLab is in the single header file `EigenLab.h`. Just include it.
 
-EigenLab requires the header only C++ library `Eigen (http://eigen.tuxfamily.org)` (tested with version 3.2.2) for matrix math. Either make sure Eigen is in your searched include paths, or change the include statement in `EigenLab.h` from `#include <Eigen/Dense>` to `#include <YOUR/PATH/TO/Eigen/Dense>`.
+EigenLab requires the header only C++ library `Eigen <http://eigen.tuxfamily.org>` (tested with version 3.2.2) for matrix math. Either make sure Eigen is in your searched include paths, or change the include statement in `EigenLab.h` from `#include <Eigen/Dense>` to `#include <YOUR/PATH/TO/Eigen/Dense>`.
 
 ### LICENSE
 ---
@@ -451,3 +453,7 @@ Added the `test()` function for debugging. This function is meant to test all fu
 Thanks to Ilja Honkonen <ilja.j.honkonen@nasa.gov> for adding expression caching to speed performance when re-evaluating the same expression multiple times, and also for suggesting several type casts to remove type comparison warning messages.
 
 Made expression caching optional in case one wants to avoid caching large matrices.
+
+Fixed subexpressions for numeric ranges (e.g. [1+2:3*10-4]). Previously, the expression "[1+2:3*10-4]" was interpreted as 1 + [2:3] * 10 - 4. Now it is correclty evaluated as [3:26].
+
+Added simple performance comparison with muParser (see `SpeedTestEigenLabVsMuParser.cpp`). Thanks to Ilja Honkonen <ilja.j.honkonen@nasa.gov> on which this script was based.
