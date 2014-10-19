@@ -168,7 +168,7 @@ namespace EigenLab
 		void splitEquationIntoChunks(const std::string & expression, ChunkArray & chunks, std::string & code);
 		std::string::const_iterator findClosingBracket(const std::string & str, const std::string::const_iterator openingBracket, const char closingBracket) const;
 		std::vector<std::string> splitArguments(const std::string & str, const char delimeter) const;
-		void evalIndexRange(const std::string & str, int * first, int * last);
+		void evalIndexRange(const std::string & str, int * first, int * last, int numIndices);
 		void evalMatrixExpression(const std::string & str, Value<Derived> & mat);
 		void evalFunction(const std::string & name, std::vector<std::string> & args, Value<Derived> & result);
 		void evalNumericRange(const std::string & str, Value<Derived> & mat);
@@ -306,30 +306,32 @@ namespace EigenLab
 				if(prevType == VARIABLE)
 					chunks.back().value.setShared(var(chunks.back().field));
 				int first, last;
+				int rows = int(chunks.back().value.matrix().rows());
+				int cols = int(chunks.back().value.matrix().cols());
 				std::vector<std::string> args = splitArguments(field, ',');
 				if(args.size() == 1) {
-					if(chunks.back().value.matrix().cols() == 1) {
-						evalIndexRange(args[0], & first, & last);
+					if(cols == 1) {
+						evalIndexRange(args[0], & first, & last, rows);
 						chunks.back().row0 = first;
 						chunks.back().col0 = 0;
-						chunks.back().rows = (last == -1 ? int(chunks.back().value.matrix().rows()) : last + 1) - first;
+						chunks.back().rows = last + 1 - first;//(last == -1 ? int(chunks.back().value.matrix().rows()) : last + 1) - first;
 						chunks.back().cols = 1;
-					} else if(chunks.back().value.matrix().rows() == 1) {
-						evalIndexRange(args[0], & first, & last);
+					} else if(rows == 1) {
+						evalIndexRange(args[0], & first, & last, cols);
 						chunks.back().row0 = 0;
 						chunks.back().col0 = first;
 						chunks.back().rows = 1;
-						chunks.back().cols = (last == -1 ? int(chunks.back().value.matrix().cols()) : last + 1) - first;
+						chunks.back().cols = last + 1 - first;//(last == -1 ? int(chunks.back().value.matrix().cols()) : last + 1) - first;
 					} else {
 						throw std::runtime_error("Missing row or column indices for '(" + chunks.back().field + "(" + field + ")'.");
 					}
 				} else if(args.size() == 2) {
-					evalIndexRange(args[0], & first, & last);
+					evalIndexRange(args[0], & first, & last, rows);
 					chunks.back().row0 = first;
-					chunks.back().rows = (last == -1 ? int(chunks.back().value.matrix().rows()) : last + 1) - first;
-					evalIndexRange(args[1], & first, & last);
+					chunks.back().rows = last + 1 - first;//(last == -1 ? int(chunks.back().value.matrix().rows()) : last + 1) - first;
+					evalIndexRange(args[1], & first, & last, cols);
 					chunks.back().col0 = first;
-					chunks.back().cols = (last == -1 ? int(chunks.back().value.matrix().cols()) : last + 1) - first;
+					chunks.back().cols = last + 1 - first;//(last == -1 ? int(chunks.back().value.matrix().cols()) : last + 1) - first;
 				} else {
 					throw std::runtime_error("Invalid index expression '" + chunks.back().field + "(" + field + ")'.");
 				}
@@ -456,39 +458,55 @@ namespace EigenLab
 	}
 
 	template <typename Derived>
-	void Parser<Derived>::evalIndexRange(const std::string & str, int * first, int * last)
+	void Parser<Derived>::evalIndexRange(const std::string & str, int * first, int * last, int numIndices)
 	{
 		if(str.empty())
 			throw std::runtime_error("Empty index range.");
 		ValueXi valuei;
 		ParserXi parseri;
+		size_t pos;
 		for(std::string::const_iterator it = str.begin(); it != str.end(); it++) {
 			if((*it) == ':') {
 				std::string firstStr = trim(std::string(str.begin(), it));
 				std::string lastStr = trim(std::string(it + 1, str.end()));
 				if(firstStr.empty() && lastStr.empty()) {
 					(* first) = 0;
-					(* last) = -1;
+					(* last) = numIndices - 1;
 					return;
 				}
 				if(firstStr.empty() || lastStr.empty())
 					throw std::runtime_error("Missing indices for '" + str + "'.");
+				
+				pos = firstStr.find("end");
+				if(pos != std::string::npos) {
+					firstStr = firstStr.substr(0, pos) + numberToString<int>(numIndices - 1) + firstStr.substr(pos + 3);
+				}
+				pos = lastStr.find("end");
+				if(pos != std::string::npos) {
+					lastStr = lastStr.substr(0, pos) + numberToString<int>(numIndices - 1) + lastStr.substr(pos + 3);
+				}
+				
 				valuei = parseri.eval(firstStr);
 				if(valuei.matrix().size() != 1)
 					throw std::runtime_error("Invalid indices '" + str + "'.");
 				(* first) = valuei.matrix()(0, 0);
-				if(lastStr == "end")
-					(* last) = -1;
-				else {
-					valuei = parseri.eval(lastStr);
-					if(valuei.matrix().size() != 1)
-						throw std::runtime_error("Invalid indices '" + str + "'.");
-					(* last) = valuei.matrix()(0, 0);
-				}
+				
+				valuei = parseri.eval(lastStr);
+				if(valuei.matrix().size() != 1)
+					throw std::runtime_error("Invalid indices '" + str + "'.");
+				(* last) = valuei.matrix()(0, 0);
+				
 				return;
 			}
 		}
-		valuei = parseri.eval(str);
+		std::string firstStr = str;
+		
+		pos = firstStr.find("end");
+		if(pos != std::string::npos) {
+			firstStr = firstStr.substr(0, pos) + numberToString<int>(numIndices - 1) + firstStr.substr(pos + 3);
+		}
+		
+		valuei = parseri.eval(firstStr);
 		if(valuei.matrix().size() != 1)
 			throw std::runtime_error("Invalid index '" + str + "'.");
 		(* first) = valuei.matrix()(0, 0);
@@ -503,6 +521,7 @@ namespace EigenLab
 		std::vector<std::vector<typename Derived::Scalar> > temp;
 		Value<Derived> submatrix;
 		size_t row0 = 0, col0 = 0, nrows = 0, ncols = 0;
+		size_t pos;
 		for(size_t i = 0; i < rows.size(); i++) {
 			// Strip row brackets if they exist.
 			if(rows[i][0] == '[' && rows[i].back() == ']') rows[i] = rows[i].substr(1, int(rows[i].size()) - 2);
@@ -510,7 +529,61 @@ namespace EigenLab
 			col0 = 0;
 			ncols = 0;
 			for(size_t j = 0; j < cols.size(); j++) {
-				submatrix = eval(cols[j]);
+				pos = cols[j].find(":");
+				if(pos != std::string::npos) {
+					std::string firstStr = cols[j].substr(0, pos);
+					std::string lastStr = cols[j].substr(pos + 1);
+					pos = lastStr.find(":");
+					if(pos != std::string::npos) {
+						std::string stepStr = lastStr.substr(0, pos);
+						lastStr = lastStr.substr(pos + 1);
+						if(lastStr.find(":") != std::string::npos)
+							throw std::runtime_error("Invalid matrix definition '[" + str + "]'. Invalid range '" + cols[j] + "'.");
+						// first:step:last
+						Value<Derived> first = eval(firstStr);
+						Value<Derived> step = eval(stepStr);
+						Value<Derived> last = eval(lastStr);
+						if(first.matrix().size() != 1 || step.matrix().size() != 1 || last.matrix().size() != 1)
+							throw std::runtime_error("Invalid matrix definition '[" + str + "]'. Invalid range '" + cols[j] + "'.");
+						typename Derived::Scalar sfirst = first.matrix()(0);
+						typename Derived::Scalar sstep = step.matrix()(0);
+						typename Derived::Scalar slast = last.matrix()(0);
+						if(sfirst == slast) {
+							submatrix.local().setConstant(1, 1, sfirst);
+							submatrix.mapLocal();
+						} else if((slast - sfirst >= 0 && sstep > 0) || (slast - sfirst <= 0 && sstep < 0)) {
+							int n = floor((slast - sfirst) / sstep) + 1;
+							submatrix.local().resize(1, n);
+							for(int k = 0; k < n; ++k)
+								submatrix.local()(0, k) = sfirst + k * sstep;
+							submatrix.mapLocal();
+						} else {
+							throw std::runtime_error("Invalid matrix definition '[" + str + "]'. Invalid range '" + cols[j] + "'.");
+						}
+					} else {
+						// first:last => first:1:last
+						Value<Derived> first = eval(firstStr);
+						Value<Derived> last = eval(lastStr);
+						if(first.matrix().size() != 1 || last.matrix().size() != 1)
+							throw std::runtime_error("Invalid matrix definition '[" + str + "]'. Invalid range '" + cols[j] + "'.");
+						typename Derived::Scalar sfirst = first.matrix()(0);
+						typename Derived::Scalar slast = last.matrix()(0);
+						if(sfirst == slast) {
+							submatrix.local().setConstant(1, 1, sfirst);
+							submatrix.mapLocal();
+						} else if(slast - sfirst >= 0) {
+							int n = floor(slast - sfirst) + 1;
+							submatrix.local().resize(1, n);
+							for(int k = 0; k < n; ++k)
+								submatrix.local()(0, k) = sfirst + k;
+							submatrix.mapLocal();
+						} else {
+							throw std::runtime_error("Invalid matrix definition '[" + str + "]'. Invalid range '" + cols[j] + "'.");
+						}
+					}
+				} else {
+					submatrix = eval(cols[j]);
+				}
 				if(j > 0 && size_t(submatrix.matrix().cols()) != nrows)
 					throw std::runtime_error("Invalid matrix definition '[" + str + "]'. Successive column entries '" + cols[int(j) - 1] + "' and '" + cols[j] + "' do not have the same number of rows.");
 				nrows = submatrix.matrix().rows();
@@ -1555,6 +1628,18 @@ namespace EigenLab
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
+		std::cout << "Test submatrix block access using subexpressions: ";
+		resultValue = eval("a(2-1:2-1,0+1:3-1)");
+		resultMatrix = a34.block(1, 1, 1, 2);
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+		
+		std::cout << "Test submatrix block access using subexpressions with 'end' keyword: ";
+		resultValue = eval("a(2-1:end-1,0+1:end-1)");
+		resultMatrix = a34.block(1, 1, a34.rows() - 2, a34.cols() - 2);
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+		
 		std::cout << "Test vector coefficient access v(i): ";
 		resultValue = eval("v(5)");
 		resultMatrix.setConstant(1, 1, v(5));
@@ -1579,6 +1664,18 @@ namespace EigenLab
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
+		std::cout << "Test subvector segment access using subexpressions: ";
+		resultValue = eval("v(3-1:5+2)");
+		resultMatrix = v.block(0, 2, 1, 6);
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+		
+		std::cout << "Test subvector segment access using subexpressions with 'end' keyword: ";
+		resultValue = eval("v((end-8)*2:end-3)");
+		resultMatrix = v.block(0, 2, 1, 5);
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+		
 		////////////////////////////////////////
 		std::cout << std::endl << "Testing vector/matrix expressions..." << std::endl << std::endl;
 		////////////////////////////////////////
@@ -1594,6 +1691,14 @@ namespace EigenLab
 		resultValue = eval("[2:2:10]");
 		resultMatrix.resize(1, 5);
 		resultMatrix << 2, 4, 6, 8, 10;
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+		
+		std::cout << "Test numeric range with subexpressions: ";
+		resultValue = eval("[6-2:5*2-3]");
+		std::cout << "val=" << std::endl << resultValue.matrix() << std::endl << std::endl;
+		resultMatrix.resize(1, 4);
+		resultMatrix << 4, 5, 6, 7;
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
