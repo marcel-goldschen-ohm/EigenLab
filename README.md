@@ -25,7 +25,7 @@ License: MIT
 Copyright (c) 2014 Dr. Marcel Paz Goldschen-Ohm
 
 ### Why should I use EigenLab?
-When you need to evaluate a previously unknown matrix math equation that is input by the user at run time, and optionally contains variable names referencing preallocated data (and has a simple and intuitive interface).
+When you need to evaluate a previously unknown matrix math equation that is input by the user at run time, and optionally contains variable names referencing preallocated data. Also because EigenLab has a simple and intuitive interface (similar to MATLAB), and is entirely contained within a single header file.
 
 ### When NOT to use EigenLab?
 When you are evaluating a math equation that is known at compile time.
@@ -37,6 +37,8 @@ I have not done an extensive test of performance in EigenLab as compared to othe
 
 ### Are there alternatives to EigenLab?
 To my knowledge, there are no native C/C++ alternatives to EigenLab which can both parse matrix math equations and provide an incredibly simple and user friendly interface (i.e. like MATLAB).
+
+*Update:* The ExprTk project <http://www.partow.net/programming/exprtk/index.html> looks interesting and seems like it can do some vector expression operations, as well as a bunch of stuff that EigenLab doesn't even try to do. However, I've not used it in any depth.
 
 If you don't need matrix operations, there are several equation parsers which can evaluate math equations for floating point numbers, such as GNU libmatheval <http://www.gnu.org/software/libmatheval>, muParser <http://muparser.beltoforion.de>, and MathPresso or DoublePresso <https://github.com/tartakynov/mathpresso>. As I have not spent the time to really dig through these libraries, please feel free to correct me if I am wrong about this, or to inform me of another library not listed here.
 
@@ -438,11 +440,7 @@ Version History
 
 ### 0.9.0
 
-*** August 26, 2014 ***
-
-Initial beta release.
-
-*** October 17, 2014 ***
+**October 17, 2014**
 
 Added the `absmax()` function, which was missing in the previous version.
 
@@ -457,3 +455,7 @@ Made expression caching optional in case one wants to avoid caching large matric
 Fixed subexpressions for numeric ranges (e.g. [1+2:3*10-4]). Previously, the expression "[1+2:3*10-4]" was interpreted as 1 + [2:3] * 10 - 4. Now it is correclty evaluated as [3:26].
 
 Added simple performance comparison with muParser (see `SpeedTestEigenLabVsMuParser.cpp`). Thanks to Ilja Honkonen <ilja.j.honkonen@nasa.gov> on which this script was based.
+
+**August 26, 2014**
+
+Initial beta release.
