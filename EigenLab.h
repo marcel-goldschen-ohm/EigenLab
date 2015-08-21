@@ -1,9 +1,9 @@
 //----------------------------------------
 // EigenLab
-// Version: 0.9.0
+// Version: 1.0.0
 // Author: Dr. Marcel Paz Goldschen-Ohm
 // Email:  marcel.goldschen@gmail.com
-// Copyright (c) 2014 by Dr. Marcel Paz Goldschen-Ohm.
+// Copyright (c) 2015 by Dr. Marcel Paz Goldschen-Ohm.
 // Licence: MIT
 //----------------------------------------
 

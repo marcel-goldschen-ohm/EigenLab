@@ -438,6 +438,10 @@ If you need to re-evaluate the same expression multiple times, you can optionall
 Version History
 ===
 
+### 1.0.0
+
+**August 21, 2015**
+
 ### 0.9.0
 
 **October 17, 2014**
