@@ -209,9 +209,9 @@ namespace EigenLab
 	//----------------------------------------
 	template <typename Derived>
 	Parser<Derived>::Parser() :
-		mCacheChunkedExpressions(false),
 		mOperators1("+-*/^()[]="),
-		mOperators2(".+.-.*./.^")
+        mOperators2(".+.-.*./.^"),
+        mCacheChunkedExpressions(false)
 	{
 		// Coefficient-wise operations.
 		mFunctions.push_back("abs");
@@ -740,7 +740,7 @@ namespace EigenLab
 					result.local() = arg0.matrix().colwise().maxCoeff();
 					result.mapLocal();
 					Derived minimum = arg0.matrix().colwise().minCoeff();
-					for(size_t i = 0; i < result.matrix().size(); i++) {
+					for(size_t i = 0; i < size_t(result.matrix().size()); i++) {
 						if(fabs(result.matrix()(i)) < fabs(minimum(i)))
 							result.matrix()(i) = minimum(i);
 					}
@@ -749,7 +749,7 @@ namespace EigenLab
 					result.local() = arg0.matrix().rowwise().maxCoeff();
 					result.mapLocal();
 					Derived minimum = arg0.matrix().rowwise().minCoeff();
-					for(size_t i = 0; i < result.matrix().size(); i++) {
+					for(size_t i = 0; i < size_t(result.matrix().size()); i++) {
 						if(fabs(result.matrix()(i)) < fabs(minimum(i)))
 							result.matrix()(i) = minimum(i);
 					}
