@@ -1,4 +1,4 @@
-//----------------------------------------
+// --*-  Mode: C++; c-basic-offset: 8 -*--
 // EigenLab
 // Version: 1.0.0
 // Author: Dr. Marcel Paz Goldschen-Ohm
@@ -12,6 +12,7 @@
 
 #include <Eigen/Dense>
 #include <iomanip>
+#include <type_traits>
 #include <map>
 #include <sstream>
 #include <stdexcept>
@@ -108,6 +109,19 @@ namespace EigenLab
 	typedef Value<Eigen::MatrixXf> ValueXf;
 	typedef Value<Eigen::MatrixXi> ValueXi;
 	
+	// check if a class has a comparison operator (ie. std::complex does not)
+	template<typename T>
+	struct has_operator_lt_impl
+	{
+		template<class U>
+		static auto test(U*) -> decltype(std::declval<U>() < std::declval<U>());
+		template<typename>
+		static auto test(...) -> std::false_type;
+		using type = typename std::is_same<bool, decltype(test<T>(0))>::type;
+	};
+	template<typename T>
+	struct has_operator_lt : has_operator_lt_impl<T>::type {};
+	
 	//----------------------------------------
 	// Equation parser.
 	//
@@ -171,6 +185,11 @@ namespace EigenLab
 		void evalIndexRange(const std::string & str, int * first, int * last, int numIndices);
 		void evalMatrixExpression(const std::string & str, Value<Derived> & mat);
 		void evalFunction(const std::string & name, std::vector<std::string> & args, Value<Derived> & result);
+		bool evalFunction_1_lt(const std::string & name, Value<Derived> & arg, Value<Derived> & result, std::false_type);
+		bool evalFunction_1_lt(const std::string & name, Value<Derived> & arg, Value<Derived> & result, std::true_type);
+		bool evalFunction_2_lt(const std::string & name, Value<Derived> & arg, int dim, Value<Derived> & result, std::false_type);
+		bool evalFunction_2_lt(const std::string & name, Value<Derived> & arg, int dim, Value<Derived> & result, std::true_type);
+		
 		void evalNumericRange(const std::string & str, Value<Derived> & mat);
 		inline bool isVariable(const std::string & name) const { return mVariables.count(name) > 0; }
 		inline bool isOperator(const char c) const { return (std::find(mOperators1.begin(), mOperators1.end(), c) != mOperators1.end()); }
@@ -197,7 +216,11 @@ namespace EigenLab
 		template <typename T> static T stringToNumber(const std::string & str);
 		template <typename T> static std::string numberToString(T num, int precision = 0);
 #ifdef DEBUG
-		void test();
+		void test_w_lt(size_t & numFails, typename Derived::Scalar & s, Derived & a34, Derived & b34, Derived & c43,
+			       Derived & v, std::true_type);
+		void test_w_lt(size_t & numFails, typename Derived::Scalar & s, Derived & a34, Derived & b34, Derived & c43,
+			       Derived & v, std::false_type);
+		size_t test();
 #endif
 	};
 	typedef Parser<Eigen::MatrixXd> ParserXd;
@@ -210,8 +233,8 @@ namespace EigenLab
 	template <typename Derived>
 	Parser<Derived>::Parser() :
 		mOperators1("+-*/^()[]="),
-        mOperators2(".+.-.*./.^"),
-        mCacheChunkedExpressions(false)
+		mOperators2(".+.-.*./.^"),
+		mCacheChunkedExpressions(false)
 	{
 		// Coefficient-wise operations.
 		mFunctions.push_back("abs");
@@ -229,9 +252,11 @@ namespace EigenLab
 		mFunctions.push_back("trace");
 		mFunctions.push_back("norm");
 		mFunctions.push_back("size");
-		mFunctions.push_back("min");
-		mFunctions.push_back("max");
-		mFunctions.push_back("absmax");
+		if (has_operator_lt<typename Derived::Scalar>::value) {
+			mFunctions.push_back("min");
+			mFunctions.push_back("max");
+			mFunctions.push_back("absmax");
+		}
 		mFunctions.push_back("mean");
 		mFunctions.push_back("sum");
 		mFunctions.push_back("prod");
@@ -545,13 +570,13 @@ namespace EigenLab
 						Value<Derived> last = eval(lastStr);
 						if(first.matrix().size() != 1 || step.matrix().size() != 1 || last.matrix().size() != 1)
 							throw std::runtime_error("Invalid matrix definition '[" + str + "]'. Invalid range '" + cols[j] + "'.");
-						typename Derived::Scalar sfirst = first.matrix()(0);
-						typename Derived::Scalar sstep = step.matrix()(0);
-						typename Derived::Scalar slast = last.matrix()(0);
+						typename Derived::RealScalar sfirst = std::real(first.matrix()(0));
+						typename Derived::RealScalar sstep = std::real(step.matrix()(0));
+						typename Derived::RealScalar slast = std::real(last.matrix()(0));
 						if(sfirst == slast) {
 							submatrix.local().setConstant(1, 1, sfirst);
 							submatrix.mapLocal();
-						} else if((slast - sfirst >= 0 && sstep > 0) || (slast - sfirst <= 0 && sstep < 0)) {
+						} else if((slast - sfirst) / sstep > 0) {
 							int n = floor((slast - sfirst) / sstep) + 1;
 							submatrix.local().resize(1, n);
 							for(int k = 0; k < n; ++k)
@@ -566,8 +591,8 @@ namespace EigenLab
 						Value<Derived> last = eval(lastStr);
 						if(first.matrix().size() != 1 || last.matrix().size() != 1)
 							throw std::runtime_error("Invalid matrix definition '[" + str + "]'. Invalid range '" + cols[j] + "'.");
-						typename Derived::Scalar sfirst = first.matrix()(0);
-						typename Derived::Scalar slast = last.matrix()(0);
+						typename Derived::RealScalar sfirst = std::real(first.matrix()(0));
+						typename Derived::RealScalar slast = std::real(last.matrix()(0));
 						if(sfirst == slast) {
 							submatrix.local().setConstant(1, 1, sfirst);
 							submatrix.mapLocal();
@@ -610,6 +635,84 @@ namespace EigenLab
 		}
 		mat.mapLocal();
 	}
+
+	template <typename Derived>
+	bool Parser<Derived>::evalFunction_1_lt(const std::string & name, Value<Derived> & arg, Value<Derived> & result, std::true_type)
+	{
+		if(name == "min") {
+			result.setLocal(arg.matrix().minCoeff());
+			return true;
+		} else if(name == "max") {
+			result.setLocal(arg.matrix().maxCoeff());
+			return true;
+		} else if(name == "absmax") {
+			typename Derived::Scalar minimum = arg.matrix().minCoeff();
+			typename Derived::Scalar maximum = arg.matrix().maxCoeff();
+			result.setLocal(std::abs(maximum) >= std::abs(minimum) ? maximum : minimum);
+			return true;
+		}
+		return false;
+	}
+
+	template <typename Derived>
+	bool Parser<Derived>::evalFunction_1_lt(const std::string & name, Value<Derived> & arg, Value<Derived> & result, std::false_type)
+	{
+		return false;
+	}
+
+	template <typename Derived>
+	bool Parser<Derived>::evalFunction_2_lt(const std::string & name, Value<Derived> & arg0, int dim, Value<Derived> & result, std::true_type)
+	{
+		if(name == "min") {
+			if(dim == 0) {
+				result.local() = arg0.matrix().colwise().minCoeff();
+				result.mapLocal();
+				return true;
+			} else if(dim == 1) {
+				result.local() = arg0.matrix().rowwise().minCoeff();
+				result.mapLocal();
+				return true;
+			}
+		} else if(name == "max") {
+			if(dim == 0) {
+				result.local() = arg0.matrix().colwise().maxCoeff();
+				result.mapLocal();
+				return true;
+			} else if(dim == 1) {
+				result.local() = arg0.matrix().rowwise().maxCoeff();
+				result.mapLocal();
+				return true;
+			}
+		} else if(name == "absmax") {
+			if(dim == 0) {
+				result.local() = arg0.matrix().colwise().maxCoeff();
+				result.mapLocal();
+				Derived minimum = arg0.matrix().colwise().minCoeff();
+				for(size_t i = 0; i < size_t(result.matrix().size()); i++) {
+					if(std::abs(result.matrix()(i)) < std::abs(minimum(i)))
+						result.matrix()(i) = minimum(i);
+				}
+				return true;
+			} else if(dim == 1) {
+				result.local() = arg0.matrix().rowwise().maxCoeff();
+				result.mapLocal();
+				Derived minimum = arg0.matrix().rowwise().minCoeff();
+				for(size_t i = 0; i < size_t(result.matrix().size()); i++) {
+					if(std::abs(result.matrix()(i)) < std::abs(minimum(i)))
+						result.matrix()(i) = minimum(i);
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+
+	template <typename Derived>
+	bool Parser<Derived>::evalFunction_2_lt(const std::string & name, Value<Derived> & arg0, int dim, Value<Derived> & result,
+						std::false_type)
+	{
+		return false;
+	}
 	
 	template <typename Derived>
 	void Parser<Derived>::evalFunction(const std::string & name, std::vector<std::string> & args, Value<Derived> & result)
@@ -617,7 +720,7 @@ namespace EigenLab
 		if(args.size() == 1) {
 			Value<Derived> arg = eval(args[0]);
 			if(name == "abs") {
-				result.local() = arg.matrix().array().abs();
+				result.local() = arg.matrix().array().abs().template cast<typename Derived::Scalar>();
 				result.mapLocal();
 				return;
 			} else if(name == "sqrt") {
@@ -662,18 +765,11 @@ namespace EigenLab
 			} else if(name == "norm") {
 				result.setLocal(arg.matrix().norm());
 				return;
-			} else if(name == "min") {
-				result.setLocal(arg.matrix().minCoeff());
+			}
+			else if (evalFunction_1_lt(name, arg, result, has_operator_lt<typename Derived::Scalar>())) {
 				return;
-			} else if(name == "max") {
-				result.setLocal(arg.matrix().maxCoeff());
-				return;
-			} else if(name == "absmax") {
-				typename Derived::Scalar minimum = arg.matrix().minCoeff();
-				typename Derived::Scalar maximum = arg.matrix().maxCoeff();
-				result.setLocal(fabs(maximum) >= fabs(minimum) ? maximum : minimum);
-				return;
-			} else if(name == "mean") {
+			}
+			else if(name == "mean") {
 				result.setLocal(arg.matrix().mean());
 				return;
 			} else if(name == "sum") {
@@ -715,47 +811,11 @@ namespace EigenLab
 					result.setLocal((typename Derived::Scalar) arg0.matrix().cols());
 					return;
 				}
-			} else if(name == "min") {
-				if(dim == 0) {
-					result.local() = arg0.matrix().colwise().minCoeff();
-					result.mapLocal();
-					return;
-				} else if(dim == 1) {
-					result.local() = arg0.matrix().rowwise().minCoeff();
-					result.mapLocal();
-					return;
-				}
-			} else if(name == "max") {
-				if(dim == 0) {
-					result.local() = arg0.matrix().colwise().maxCoeff();
-					result.mapLocal();
-					return;
-				} else if(dim == 1) {
-					result.local() = arg0.matrix().rowwise().maxCoeff();
-					result.mapLocal();
-					return;
-				}
-			} else if(name == "absmax") {
-				if(dim == 0) {
-					result.local() = arg0.matrix().colwise().maxCoeff();
-					result.mapLocal();
-					Derived minimum = arg0.matrix().colwise().minCoeff();
-					for(size_t i = 0; i < size_t(result.matrix().size()); i++) {
-						if(fabs(result.matrix()(i)) < fabs(minimum(i)))
-							result.matrix()(i) = minimum(i);
-					}
-					return;
-				} else if(dim == 1) {
-					result.local() = arg0.matrix().rowwise().maxCoeff();
-					result.mapLocal();
-					Derived minimum = arg0.matrix().rowwise().minCoeff();
-					for(size_t i = 0; i < size_t(result.matrix().size()); i++) {
-						if(fabs(result.matrix()(i)) < fabs(minimum(i)))
-							result.matrix()(i) = minimum(i);
-					}
-					return;
-				}
-			} else if(name == "mean") {
+			}
+			else if (evalFunction_2_lt(name, arg0, dim, result, has_operator_lt<typename Derived::Scalar>())) {
+				return;
+			}
+			else if(name == "mean") {
 				if(dim == 0) {
 					result.local() = arg0.matrix().colwise().mean();
 					result.mapLocal();
@@ -811,12 +871,14 @@ namespace EigenLab
 			std::string lastStr = str.substr(pos + 1);
 			Value<Derived> first = eval(firstStr);
 			Value<Derived> last = eval(lastStr);
-			if(first.matrix().size() != 1 || last.matrix().size() != 1 || first.matrix()(0, 0) > last.matrix()(0, 0))
+			typename Derived::RealScalar sfirst = std::real(first.matrix()(0,0));
+			typename Derived::RealScalar slast = std::real(last.matrix()(0,0));
+			if(first.matrix().size() != 1 || last.matrix().size() != 1 || sfirst > slast)
 				throw std::runtime_error("Invalid numeric range '" + str + "'.");
-			int n = 1 + floor(last.matrix()(0, 0) - first.matrix()(0, 0));
+			int n = 1 + floor(slast - sfirst);
 			mat.local().resize(1, n);
 			for(int i = 0; i < n; i++)
-				mat.local()(0, i) = first.matrix()(0, 0) + i;
+				mat.local()(0, i) = sfirst + i;
 			mat.mapLocal();
 		} else {
 			// first:step:last
@@ -829,19 +891,22 @@ namespace EigenLab
 			Value<Derived> last = eval(lastStr);
 			if(first.matrix().size() != 1 || step.matrix().size() != 1 || last.matrix().size() != 1)
 				throw std::runtime_error("Invalid numeric range '" + str + "'.");
-			if(first.matrix()(0, 0) == last.matrix()(0, 0)) {
-				mat = first.matrix()(0, 0);
-			} else if(first.matrix()(0, 0) < last.matrix()(0, 0) && step.matrix()(0, 0) > 0) {
-				int n = 1 + floor((last.matrix()(0, 0) - first.matrix()(0, 0)) / step.matrix()(0, 0));
+			typename Derived::RealScalar sfirst = std::real(first.matrix()(0, 0));
+			typename Derived::RealScalar sstep = std::real(step.matrix()(0, 0));
+			typename Derived::RealScalar slast = std::real(last.matrix()(0, 0));
+			if(sfirst == slast) {
+				mat = sfirst;
+			} else if(sfirst < slast && sstep > 0) {
+				int n = 1 + floor((slast - sfirst) / sstep);
 				mat.local().resize(1, n);
 				for(int i = 0; i < n; i++)
-					mat.local()(0, i) = first.matrix()(0, 0) + i * step.matrix()(0, 0);
+					mat.local()(0, i) = sfirst + i * sstep;
 				mat.mapLocal();
-			} else if(first.matrix()(0, 0) > last.matrix()(0, 0) && step.matrix()(0, 0) < 0) {
-				int n = 1 + floor((last.matrix()(0, 0) - first.matrix()(0, 0)) / step.matrix()(0, 0));
+			} else if(sfirst > slast && sstep < 0) {
+				int n = 1 + floor((slast - sfirst) / sstep);
 				mat.local().resize(1, n);
 				for(int i = 0; i < n; i++)
-					mat.local()(0, i) = first.matrix()(0, 0) + i * step.matrix()(0, 0);
+					mat.local()(0, i) = sfirst + i * sstep;
 				mat.mapLocal();
 			} else {
 				throw std::runtime_error("Invalid numeric range '" + str + "'.");
@@ -1367,11 +1432,104 @@ namespace EigenLab
 	
 #ifdef DEBUG
 	template <typename Derived>
-	void Parser<Derived>::test()
+	void
+	Parser<Derived>::test_w_lt(size_t & numFails,
+				   typename Derived::Scalar & s,
+				   Derived & a34,
+				   Derived & b34,
+				   Derived & c43,
+				   Derived & v, std::true_type)
+	{
+		//
+		// tests that only work if Derived::Scalar has operator<
+		//
+		Value<Derived> resultValue;
+		Derived resultMatrix;
+		Derived temp;
+		std::cout << "Test min(a): ";
+		resultValue = eval("min(a)");
+		resultMatrix.setConstant(1, 1, a34.minCoeff());
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test min(a, 0): ";
+		resultValue = eval("min(a, 0)");
+		resultMatrix = a34.colwise().minCoeff();
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test min(a, 1): ";
+		resultValue = eval("min(a, 1)");
+		resultMatrix = a34.rowwise().minCoeff();
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test max(a): ";
+		resultValue = eval("max(a)");
+		resultMatrix.setConstant(1, 1, a34.maxCoeff());
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test max(a, 0): ";
+		resultValue = eval("max(a, 0)");
+		resultMatrix = a34.colwise().maxCoeff();
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test max(a, 1): ";
+		resultValue = eval("max(a, 1)");
+		resultMatrix = a34.rowwise().maxCoeff();
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test absmax(a): ";
+		resultValue = eval("absmax(a)");
+		resultMatrix.setConstant(1, 1, std::abs(a34.maxCoeff()) >= std::abs(a34.minCoeff()) ? a34.maxCoeff() : a34.minCoeff());
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test absmax(a, 0): ";
+		resultValue = eval("absmax(a, 0)");
+		resultMatrix = a34.colwise().maxCoeff();
+		temp = a34.colwise().minCoeff();
+		for(Eigen::Index i = 0; i < resultMatrix.size(); ++i) {
+			if(std::abs(resultMatrix(i)) < std::abs(temp(i)))
+				resultMatrix(i) = temp(i);
+		}
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test absmax(a, 1): ";
+		resultValue = eval("absmax(a, 1)");
+		resultMatrix = a34.rowwise().maxCoeff();
+		temp = a34.rowwise().minCoeff();
+		for(Eigen::Index i = 0; i < resultMatrix.size(); ++i) {
+			if(std::abs(resultMatrix(i)) < std::abs(temp(i)))
+				resultMatrix(i) = temp(i);
+		}
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+	}
+
+	template <typename Derived>
+	void
+	Parser<Derived>::test_w_lt(size_t & numFails,
+				   typename Derived::Scalar & s,
+				   Derived & a34,
+				   Derived & b34,
+				   Derived & c43,
+				   Derived & v, std::false_type)
+	{
+		// do nothing
+	}
+
+	template <typename Derived>
+	size_t Parser<Derived>::test()
 	{
 		std::cout << std::endl;
 		std::cout << "BEGIN unit test for EigenLab..." << std::endl;
-		std::cout << "Make sure this function completes successfuly and prints the message 'Successfully completed unit test for EigenLab with no failures.'" << std::endl;
+		std::cout << "Make sure this function completes successfuly and prints the message "
+			"'Successfully completed unit test for EigenLab with no failures.'" << std::endl;
 		std::cout << std::endl;
 		
 		size_t numFails = 0;
@@ -1546,8 +1704,8 @@ namespace EigenLab
 		std::cout << "Test matrix coefficient-wise power a .^ b: ";
 		resultValue = eval("abs(a) .^ b");
 		resultMatrix = a34;
-		for(size_t i = 0; i < a34.size(); ++i)
-			resultMatrix(i) = pow(fabs(a34(i)), b34(i));
+		for(Eigen::Index i = 0; i < a34.size(); ++i)
+			resultMatrix(i) = pow(std::abs(a34(i)), b34(i));
 		//		std::cout << std::endl;
 		//		std::cout << "a=" << std::endl << a34 << std::endl << std::endl;
 		//		std::cout << "b=" << std::endl << b34 << std::endl << std::endl;
@@ -1559,15 +1717,15 @@ namespace EigenLab
 		std::cout << "Test matrix/scalar coefficient-wise power a ^ s: ";
 		resultValue = eval("abs(a) ^ s");
 		resultMatrix = a34;
-		for(size_t i = 0; i < a34.size(); ++i)
-			resultMatrix(i) = pow(fabs(a34(i)), s);
+		for(Eigen::Index i = 0; i < a34.size(); ++i)
+			resultMatrix(i) = pow(std::abs(a34(i)), s);
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
 		std::cout << "Test scalar/matrix coefficient-wise power s ^ b: ";
 		resultValue = eval("s ^ b");
 		resultMatrix = b34;
-		for(size_t i = 0; i < b34.size(); ++i)
+		for(Eigen::Index i = 0; i < b34.size(); ++i)
 			resultMatrix(i) = pow(s, b34(i));
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
@@ -1575,15 +1733,15 @@ namespace EigenLab
 		std::cout << "Test matrix/scalar coefficient-wise power a .^ s: ";
 		resultValue = eval("abs(a) .^ s");
 		resultMatrix = a34;
-		for(size_t i = 0; i < a34.size(); ++i)
-			resultMatrix(i) = pow(fabs(a34(i)), s);
+		for(Eigen::Index i = 0; i < a34.size(); ++i)
+			resultMatrix(i) = pow(std::abs(a34(i)), s);
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
 		std::cout << "Test scalar/matrix coefficient-wise power s .^ b: ";
 		resultValue = eval("s .^ b");
 		resultMatrix = b34;
-		for(size_t i = 0; i < b34.size(); ++i)
+		for(Eigen::Index i = 0; i < b34.size(); ++i)
 			resultMatrix(i) = pow(s, b34(i));
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
@@ -1607,7 +1765,7 @@ namespace EigenLab
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
 		////////////////////////////////////////
-		std::cout << std::endl << "Testing coefficeint and submatrix block access..." << std::endl << std::endl;
+		std::cout << std::endl << "Testing coefficient and submatrix block access..." << std::endl << std::endl;
 		////////////////////////////////////////
 		
 		std::cout << "Test matrix coefficient access a(i,j): ";
@@ -1717,36 +1875,37 @@ namespace EigenLab
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
 		////////////////////////////////////////
-		std::cout << std::endl << "Testing coefficeint-wise functions..." << std::endl << std::endl;
+		std::cout << std::endl << "Testing coefficient-wise functions..." << std::endl << std::endl;
 		////////////////////////////////////////
 		
 		std::cout << "Test coefficient-wise abs(a): ";
 		resultValue = eval("abs(a)");
-		resultMatrix = a34.array().abs();
+		resultMatrix.resize(3, 4);
+		resultMatrix.real() = a34.array().abs();
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
 		std::cout << "Test coefficient-wise sqrt(a): ";
 		resultValue = eval("sqrt(abs(a))");
-		resultMatrix = a34.array().abs().sqrt();
+		resultMatrix.real() = a34.array().abs().sqrt();
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
 		std::cout << "Test coefficient-wise exp(a): ";
 		resultValue = eval("exp(abs(a) + 0.001)");
-		resultMatrix = (a34.array().abs() + 0.001).exp();
+		resultMatrix.real() = (a34.array().abs() + 0.001).exp();
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
 		std::cout << "Test coefficient-wise log(a): ";
 		resultValue = eval("log(abs(a) + 0.001)");
-		resultMatrix = (a34.array().abs() + 0.001).log();
+		resultMatrix.real() = (a34.array().abs() + 0.001).log();
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
 		std::cout << "Test coefficient-wise log10(a): ";
 		resultValue = eval("log10(abs(a) + 0.001)");
-		resultMatrix = (a34.array().abs() + 0.001).log() * (1.0 / log(10));
+		resultMatrix.real() = (a34.array().abs() + 0.001).log() * (1.0 / log(10));
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
@@ -1808,69 +1967,7 @@ namespace EigenLab
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
-		std::cout << "Test min(a): ";
-		resultValue = eval("min(a)");
-		resultMatrix.setConstant(1, 1, a34.minCoeff());
-		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
-		else { std::cout << "FAIL" << std::endl; ++numFails; }
-		
-		std::cout << "Test min(a, 0): ";
-		resultValue = eval("min(a, 0)");
-		resultMatrix = a34.colwise().minCoeff();
-		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
-		else { std::cout << "FAIL" << std::endl; ++numFails; }
-		
-		std::cout << "Test min(a, 1): ";
-		resultValue = eval("min(a, 1)");
-		resultMatrix = a34.rowwise().minCoeff();
-		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
-		else { std::cout << "FAIL" << std::endl; ++numFails; }
-		
-		std::cout << "Test max(a): ";
-		resultValue = eval("max(a)");
-		resultMatrix.setConstant(1, 1, a34.maxCoeff());
-		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
-		else { std::cout << "FAIL" << std::endl; ++numFails; }
-		
-		std::cout << "Test max(a, 0): ";
-		resultValue = eval("max(a, 0)");
-		resultMatrix = a34.colwise().maxCoeff();
-		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
-		else { std::cout << "FAIL" << std::endl; ++numFails; }
-		
-		std::cout << "Test max(a, 1): ";
-		resultValue = eval("max(a, 1)");
-		resultMatrix = a34.rowwise().maxCoeff();
-		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
-		else { std::cout << "FAIL" << std::endl; ++numFails; }
-		
-		std::cout << "Test absmax(a): ";
-		resultValue = eval("absmax(a)");
-		resultMatrix.setConstant(1, 1, fabs(a34.maxCoeff()) >= fabs(a34.minCoeff()) ? a34.maxCoeff() : a34.minCoeff());
-		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
-		else { std::cout << "FAIL" << std::endl; ++numFails; }
-		
-		std::cout << "Test absmax(a, 0): ";
-		resultValue = eval("absmax(a, 0)");
-		resultMatrix = a34.colwise().maxCoeff();
-		temp = a34.colwise().minCoeff();
-		for(size_t i = 0; i < resultMatrix.size(); ++i) {
-			if(fabs(resultMatrix(i)) < fabs(temp(i)))
-				resultMatrix(i) = temp(i);
-		}
-		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
-		else { std::cout << "FAIL" << std::endl; ++numFails; }
-		
-		std::cout << "Test absmax(a, 1): ";
-		resultValue = eval("absmax(a, 1)");
-		resultMatrix = a34.rowwise().maxCoeff();
-		temp = a34.rowwise().minCoeff();
-		for(size_t i = 0; i < resultMatrix.size(); ++i) {
-			if(fabs(resultMatrix(i)) < fabs(temp(i)))
-				resultMatrix(i) = temp(i);
-		}
-		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
-		else { std::cout << "FAIL" << std::endl; ++numFails; }
+		test_w_lt(numFails, s, a34, b34, c43, v, has_operator_lt<typename Derived::Scalar>());
 		
 		std::cout << "Test mean(a): ";
 		resultValue = eval("mean(a)");
@@ -1984,9 +2081,10 @@ namespace EigenLab
 		else
 			std::cout << "Completed unit test for EigenLab with " << numFails << " failures (see above)." << std::endl;
 		std::cout << std::endl;
+		return numFails;
 	}
 #endif // #ifdef DEBUG
-	
+
 } // namespace EigenLab
 
 #endif // #ifndef EigenLab_H
