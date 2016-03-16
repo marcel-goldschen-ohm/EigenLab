@@ -1,0 +1,28 @@
+language: cpp
+compiler:
+  - gcc
+  - clang
+
+sudo: false
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - cmake
+    - gcc-4.9
+    - g++-4.9
+    - clang
+
+before_install:
+  - ${CXX} --version;
+
+install:
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9" CC="gcc-4.9"; fi
+  - cmake .
+  - make VERBOSE=1
+
+script: 
+  - echo ${CXX}
+  - make test
