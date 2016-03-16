@@ -17,5 +17,6 @@ int main(int argc, const char * argv[])
   auto failXcd = parserXcd.test();
 
   std::cout << "Test summary, number of failures: Xd=" << failXd << " Xf=" << failXf << " Xi=" << failXi << " Xcd=" << failXcd << std::endl;
-  return 0;
+
+  return (failXd || failXf || failXi || failXcd) ? -1 : 0;
 }
