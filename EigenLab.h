@@ -1,4 +1,4 @@
-// --*-  Mode: C++; c-basic-offset: 8 -*--
+// --*-  Mode: C++; c-basic-offset:8; indent-tabs-mode:t; tab-width:8 -*--
 // EigenLab
 // Version: 1.0.0
 // Author: Dr. Marcel Paz Goldschen-Ohm
