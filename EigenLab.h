@@ -152,6 +152,7 @@ namespace EigenLab
 		};
 		enum ChunkType { VALUE = 0, VARIABLE, OPERATOR, FUNCTION };
 		typedef std::vector<Chunk> ChunkArray;
+		typedef typename Derived::Index Index;
 		bool mCacheChunkedExpressions;
 		std::map<std::string, ChunkArray> mCachedChunkedExpressions;
 		
@@ -1489,7 +1490,7 @@ namespace EigenLab
 		resultValue = eval("absmax(a, 0)");
 		resultMatrix = a34.colwise().maxCoeff();
 		temp = a34.colwise().minCoeff();
-		for(Eigen::Index i = 0; i < resultMatrix.size(); ++i) {
+		for(Index i = 0; i < resultMatrix.size(); ++i) {
 			if(std::abs(resultMatrix(i)) < std::abs(temp(i)))
 				resultMatrix(i) = temp(i);
 		}
@@ -1500,7 +1501,7 @@ namespace EigenLab
 		resultValue = eval("absmax(a, 1)");
 		resultMatrix = a34.rowwise().maxCoeff();
 		temp = a34.rowwise().minCoeff();
-		for(Eigen::Index i = 0; i < resultMatrix.size(); ++i) {
+		for(Index i = 0; i < resultMatrix.size(); ++i) {
 			if(std::abs(resultMatrix(i)) < std::abs(temp(i)))
 				resultMatrix(i) = temp(i);
 		}
@@ -1701,7 +1702,7 @@ namespace EigenLab
 		std::cout << "Test matrix coefficient-wise power a .^ b: ";
 		resultValue = eval("abs(a) .^ b");
 		resultMatrix = a34;
-		for(Eigen::Index i = 0; i < a34.size(); ++i)
+		for(Index i = 0; i < a34.size(); ++i)
 			resultMatrix(i) = pow(std::abs(a34(i)), b34(i));
 		//		std::cout << std::endl;
 		//		std::cout << "a=" << std::endl << a34 << std::endl << std::endl;
@@ -1714,7 +1715,7 @@ namespace EigenLab
 		std::cout << "Test matrix/scalar coefficient-wise power a ^ s: ";
 		resultValue = eval("abs(a) ^ s");
 		resultMatrix = a34;
-		for(Eigen::Index i = 0; i < a34.size(); ++i)
+		for(Index i = 0; i < a34.size(); ++i)
 			resultMatrix(i) = pow(std::abs(a34(i)), s);
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
@@ -1722,7 +1723,7 @@ namespace EigenLab
 		std::cout << "Test scalar/matrix coefficient-wise power s ^ b: ";
 		resultValue = eval("s ^ b");
 		resultMatrix = b34;
-		for(Eigen::Index i = 0; i < b34.size(); ++i)
+		for(Index i = 0; i < b34.size(); ++i)
 			resultMatrix(i) = pow(s, b34(i));
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
@@ -1730,7 +1731,7 @@ namespace EigenLab
 		std::cout << "Test matrix/scalar coefficient-wise power a .^ s: ";
 		resultValue = eval("abs(a) .^ s");
 		resultMatrix = a34;
-		for(Eigen::Index i = 0; i < a34.size(); ++i)
+		for(Index i = 0; i < a34.size(); ++i)
 			resultMatrix(i) = pow(std::abs(a34(i)), s);
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
@@ -1738,7 +1739,7 @@ namespace EigenLab
 		std::cout << "Test scalar/matrix coefficient-wise power s .^ b: ";
 		resultValue = eval("s .^ b");
 		resultMatrix = b34;
-		for(Eigen::Index i = 0; i < b34.size(); ++i)
+		for(Index i = 0; i < b34.size(); ++i)
 			resultMatrix(i) = pow(s, b34(i));
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
