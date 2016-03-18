@@ -869,10 +869,12 @@ namespace EigenLab
 			std::string lastStr = str.substr(pos + 1);
 			Value<Derived> first = eval(firstStr);
 			Value<Derived> last = eval(lastStr);
+			if(first.matrix().size() != 1 || last.matrix().size() != 1)
+				throw std::runtime_error("Invalid numeric range '" + str + "'.");
 			typename Derived::RealScalar sfirst = std::real(first.matrix()(0,0));
 			typename Derived::RealScalar slast = std::real(last.matrix()(0,0));
-			if(first.matrix().size() != 1 || last.matrix().size() != 1 || sfirst > slast)
-				throw std::runtime_error("Invalid numeric range '" + str + "'.");
+			if(sfirst > slast)
+				throw std::runtime_error("Reversed numeric range '" + str + "'.");
 			int n = 1 + floor(slast - sfirst);
 			mat.local().resize(1, n);
 			for(int i = 0; i < n; i++)
