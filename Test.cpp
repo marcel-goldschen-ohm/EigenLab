@@ -10,8 +10,12 @@ int main(int argc, const char * argv[])
   EigenLab::ParserXf parserXf;
   auto failXf = parserXf.test();
   
-  EigenLab::ParserXi parserXi;
+#if EIGEN_VERSION_AT_LEAST(3,2,0)
+  EigenLab::ParserXi parserXi;        
   auto failXi = parserXi.test();
+#else
+  int failXi = 0;
+#endif
 
   EigenLab::Parser<Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic > > parserXcd;
   auto failXcd = parserXcd.test();
