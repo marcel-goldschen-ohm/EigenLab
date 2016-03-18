@@ -7,7 +7,9 @@ set (Boost_NO_BOOST_CMAKE ON) # hack for stupid old broken cmakes
 
 project (EigenLab CXX)
 
-find_package (Eigen3 REQUIRED)
+find_package( PkgConfig )
+pkg_check_modules( EIGEN3 REQUIRED eigen3 )
+#find_package (Eigen3 REQUIRED)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -std=c++11")
