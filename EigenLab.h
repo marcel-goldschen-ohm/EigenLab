@@ -216,10 +216,8 @@ namespace EigenLab
 		template <typename T> static T stringToNumber(const std::string & str);
 		template <typename T> static std::string numberToString(T num, int precision = 0);
 #ifdef DEBUG
-		void test_w_lt(size_t & numFails, typename Derived::Scalar & s, Derived & a34, Derived & b34, Derived & c43,
-			       Derived & v, std::true_type);
-		void test_w_lt(size_t & numFails, typename Derived::Scalar & s, Derived & a34, Derived & b34, Derived & c43,
-			       Derived & v, std::false_type);
+		void test_w_lt(size_t & numFails, typename Derived::Scalar & s, Derived & a34, Derived & b34, Derived & c43, Derived & v, std::true_type);
+		void test_w_lt(size_t & numFails, typename Derived::Scalar & s, Derived & a34, Derived & b34, Derived & c43, Derived & v, std::false_type);
 		size_t test();
 #endif
 	};
@@ -708,8 +706,7 @@ namespace EigenLab
 	}
 
 	template <typename Derived>
-	bool Parser<Derived>::evalFunction_2_lt(const std::string & name, Value<Derived> & arg0, int dim, Value<Derived> & result,
-						std::false_type)
+	bool Parser<Derived>::evalFunction_2_lt(const std::string & name, Value<Derived> & arg0, int dim, Value<Derived> & result, std::false_type)
 	{
 		return false;
 	}
