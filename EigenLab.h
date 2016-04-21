@@ -575,7 +575,7 @@ namespace EigenLab
 						if(sfirst == slast) {
 							submatrix.local().setConstant(1, 1, sfirst);
 							submatrix.mapLocal();
-						} else if((slast - sfirst) / sstep > 0) {
+						} else if((slast - sfirst >= 0 && sstep > 0) || (slast - sfirst <= 0 && sstep < 0)) {
 							int n = floor((slast - sfirst) / sstep) + 1;
 							submatrix.local().resize(1, n);
 							for(int k = 0; k < n; ++k)
