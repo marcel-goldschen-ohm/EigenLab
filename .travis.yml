@@ -24,6 +24,7 @@ before_install:
 
 install:
   - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9" CC="gcc-4.9"; fi
+  - cd tests
   - cmake .
   - make VERBOSE=1
 

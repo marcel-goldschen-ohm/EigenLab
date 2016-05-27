@@ -10,9 +10,9 @@ find_package (PkgConfig)
 pkg_check_modules (EIGEN3 REQUIRED eigen3)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -std=c++11")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11") # -std=gnu++11 
 
-include_directories ("${PROJECT_SOURCE_DIR}")
+include_directories ("${PROJECT_SOURCE_DIR}/..")
 include_directories ("${EIGEN3_INCLUDE_DIRS}")
 
 add_definitions (-DDEBUG)
