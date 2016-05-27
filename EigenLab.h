@@ -654,7 +654,7 @@ namespace EigenLab
 	}
 
 	template <typename Derived>
-	bool Parser<Derived>::evalFunction_1_lt(const std::string &, Value<Derived> &, Value<Derived> &, std::false_type)
+	bool Parser<Derived>::evalFunction_1_lt(const std::string &/*name*/, Value<Derived> &/*arg0*/, Value<Derived> &/*result*/, std::false_type)
 	{
 		return false;
 	}
@@ -707,7 +707,7 @@ namespace EigenLab
 	}
 
 	template <typename Derived>
-	bool Parser<Derived>::evalFunction_2_lt(const std::string &, Value<Derived> &, int, Value<Derived> &, std::false_type)
+	bool Parser<Derived>::evalFunction_2_lt(const std::string &/*name*/, Value<Derived> &/*arg0*/, int /*dim*/, Value<Derived> &/*result*/, std::false_type)
 	{
 		return false;
 	}
