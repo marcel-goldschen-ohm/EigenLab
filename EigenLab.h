@@ -874,7 +874,7 @@ namespace EigenLab
 			typename Derived::RealScalar sfirst = std::real(first.matrix()(0,0));
 			typename Derived::RealScalar slast = std::real(last.matrix()(0,0));
 			if(sfirst > slast)
-				throw std::runtime_error("Reversed numeric range '" + str + "'.");
+				throw std::runtime_error("Invalid numeric range '" + str + "'. Must not reverse.");
 			int n = 1 + floor(slast - sfirst);
 			mat.local().resize(1, n);
 			for(int i = 0; i < n; i++)
