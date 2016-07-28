@@ -654,7 +654,7 @@ namespace EigenLab
 	}
 
 	template <typename Derived>
-	bool Parser<Derived>::evalFunction_1_lt(const std::string & name, Value<Derived> & arg, Value<Derived> & result, std::false_type)
+	bool Parser<Derived>::evalFunction_1_lt(const std::string &/*name*/, Value<Derived> &/*arg0*/, Value<Derived> &/*result*/, std::false_type)
 	{
 		return false;
 	}
@@ -707,7 +707,7 @@ namespace EigenLab
 	}
 
 	template <typename Derived>
-	bool Parser<Derived>::evalFunction_2_lt(const std::string & name, Value<Derived> & arg0, int dim, Value<Derived> & result, std::false_type)
+	bool Parser<Derived>::evalFunction_2_lt(const std::string &/*name*/, Value<Derived> &/*arg0*/, int /*dim*/, Value<Derived> &/*result*/, std::false_type)
 	{
 		return false;
 	}
@@ -869,10 +869,12 @@ namespace EigenLab
 			std::string lastStr = str.substr(pos + 1);
 			Value<Derived> first = eval(firstStr);
 			Value<Derived> last = eval(lastStr);
+			if(first.matrix().size() != 1 || last.matrix().size() != 1)
+				throw std::runtime_error("Invalid numeric range '" + str + "'.");
 			typename Derived::RealScalar sfirst = std::real(first.matrix()(0,0));
 			typename Derived::RealScalar slast = std::real(last.matrix()(0,0));
-			if(first.matrix().size() != 1 || last.matrix().size() != 1 || sfirst > slast)
-				throw std::runtime_error("Invalid numeric range '" + str + "'.");
+			if(sfirst > slast)
+				throw std::runtime_error("Invalid numeric range '" + str + "'. Must not reverse.");
 			int n = 1 + floor(slast - sfirst);
 			mat.local().resize(1, n);
 			for(int i = 0; i < n; i++)
