@@ -1,6 +1,6 @@
 EigenLab
 ===
-[![Build Status](https://api.travis-ci.org/tesch1/EigenLab.svg?branch=master)](http://travis-ci.org/tesch1/EigenLab)
+[![Build Status](https://travis-ci.org/marcel-goldschen-ohm/EigenLab.svg?branch=master)](https://travis-ci.org/marcel-goldschen-ohm/EigenLab)
 
 C++ header only library for parsing/evaluating matrix math equations which are unknown until run time (e.g. user input) in a format similar to MATLAB <http://www.mathworks.com/products/matlab>. Variables can be defined via the parsed equations as in MATLAB, or alternatively mapped to preallocated data. Matrix math is performed using Eigen <http://eigen.tuxfamily.org>. Supports basic matrix operations, matrix reductions, submatrix indexing as in MATLAB (except indices are 0 based), coefficient-wise operations and coefficient-wise function evaluation. This allows the user to evaluate matrix math equations in an interactive fashion like in MATLAB, or, for example, to fit a data set using an arbitrary function defined by the user at run time. Finally, EigenLab's interface is incredibly simple and easy to use. Check out the Quick Start Examples seciton and see below for a taste of what EigenLab is capable of.
 
