@@ -328,7 +328,7 @@ Everything is in the namespace `EigenLab`.
 
 ### The Value class.
 ---
-EigenLab treats all values as matrices (i.e. a simple number is a 1x1 matrix). The `Value<Derived>` class template is a wrapper that provides a consistent interface to accessing matrix data whether that data is stored locally or points to some shared data that is stored elsewhere (i.e. variables). The template parameter `Derived` denotes the value's underlying matrix data type, which can be any dynamically sized matrix type supported by Eigen (e.g. `Eigen::MatrixXd`).
+EigenLab treats all values as matrices (i.e. a scalar is a 1x1 matrix). The `Value<Derived>` class template is a wrapper that provides a consistent interface to accessing matrix data whether that data is stored locally or points to some shared data that is stored elsewhere (i.e. variables). The template parameter `Derived` denotes the value's underlying matrix data type, which can be any dynamically sized matrix type supported by Eigen (e.g. `Eigen::MatrixXd`).
 
 ```cpp
 template <typename Derived> Value;
@@ -574,7 +574,7 @@ Thanks to Ilja Honkonen <ilja.j.honkonen@nasa.gov> for adding expression caching
 
 Made expression caching optional in case one wants to avoid caching large matrices.
 
-Fixed subexpressions for numeric ranges (e.g. [1+2:3*10-4]). Previously, the expression "[1+2:3*10-4]" was interpreted as 1 + [2:3] * 10 - 4. Now it is correclty evaluated as [3:26].
+Fixed subexpressions for numeric ranges. Previously, the expression "[1 + 2 : 3 * 10 - 4]" was interpreted as 1 + [2:3] * 10 - 4. Now it is correclty evaluated as [3:26].
 
 Added simple performance comparison with muParser (see `SpeedTestEigenLabVsMuParser.cpp`). Thanks to Ilja Honkonen <ilja.j.honkonen@nasa.gov> on which this script was based.
 
