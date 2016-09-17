@@ -188,8 +188,8 @@ namespace EigenLab
 		void evalFunction(const std::string & name, std::vector<std::string> & args, Value<Derived> & result);
 		bool evalFunction_1_lt(const std::string & name, Value<Derived> & arg, Value<Derived> & result, std::false_type);
 		bool evalFunction_1_lt(const std::string & name, Value<Derived> & arg, Value<Derived> & result, std::true_type);
-		bool evalFunction_2_lt(const std::string & name, Value<Derived> & arg, int dim, Value<Derived> & result, std::false_type);
-		bool evalFunction_2_lt(const std::string & name, Value<Derived> & arg, int dim, Value<Derived> & result, std::true_type);
+		bool evalFunction_2_lt(const std::string & name, Value<Derived> & arg0, Value<Derived> & arg1, Value<Derived> & result, std::false_type);
+		bool evalFunction_2_lt(const std::string & name, Value<Derived> & arg0, Value<Derived> & arg1, Value<Derived> & result, std::true_type);
 		
 		void evalNumericRange(const std::string & str, Value<Derived> & mat);
 		inline bool isVariable(const std::string & name) const { return mVariables.count(name) > 0; }
@@ -263,7 +263,12 @@ namespace EigenLab
 		// Matrix operations.
 		mFunctions.push_back("transpose");
 		mFunctions.push_back("conjugate");
-		mFunctions.push_back("adjoint");
+        mFunctions.push_back("adjoint");
+        
+        // Matrix initializers.
+        mFunctions.push_back("zeros");
+        mFunctions.push_back("ones");
+        mFunctions.push_back("eye");
 	}
 	
 	template <typename Derived>
@@ -660,9 +665,14 @@ namespace EigenLab
 	}
 
 	template <typename Derived>
-	bool Parser<Derived>::evalFunction_2_lt(const std::string & name, Value<Derived> & arg0, int dim, Value<Derived> & result, std::true_type)
+	bool Parser<Derived>::evalFunction_2_lt(const std::string & name, Value<Derived> & arg0, Value<Derived> & arg1, Value<Derived> & result, std::true_type)
 	{
-		if(name == "min") {
+        if(name == "min") {
+            if(arg1.matrix().size() != 1)
+                throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
+            int dim = floor(std::real(arg1.matrix()(0, 0)));
+            if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
+                throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
 			if(dim == 0) {
 				result.local() = arg0.matrix().colwise().minCoeff();
 				result.mapLocal();
@@ -672,7 +682,12 @@ namespace EigenLab
 				result.mapLocal();
 				return true;
 			}
-		} else if(name == "max") {
+        } else if(name == "max") {
+            if(arg1.matrix().size() != 1)
+                throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
+            int dim = floor(std::real(arg1.matrix()(0, 0)));
+            if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
+                throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
 			if(dim == 0) {
 				result.local() = arg0.matrix().colwise().maxCoeff();
 				result.mapLocal();
@@ -682,7 +697,12 @@ namespace EigenLab
 				result.mapLocal();
 				return true;
 			}
-		} else if(name == "absmax") {
+        } else if(name == "absmax") {
+            if(arg1.matrix().size() != 1)
+                throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
+            int dim = floor(std::real(arg1.matrix()(0, 0)));
+            if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
+                throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
 			if(dim == 0) {
 				result.local() = arg0.matrix().colwise().maxCoeff();
 				result.mapLocal();
@@ -701,13 +721,13 @@ namespace EigenLab
 						result.matrix()(i) = minimum(i);
 				}
 				return true;
-			}
+            }
 		}
 		return false;
 	}
 
 	template <typename Derived>
-	bool Parser<Derived>::evalFunction_2_lt(const std::string &/*name*/, Value<Derived> &/*arg0*/, int /*dim*/, Value<Derived> &/*result*/, std::false_type)
+	bool Parser<Derived>::evalFunction_2_lt(const std::string &/*name*/, Value<Derived> &/*arg0*/, Value<Derived> &/*arg1*/, Value<Derived> &/*result*/, std::false_type)
 	{
 		return false;
 	}
@@ -763,11 +783,9 @@ namespace EigenLab
 			} else if(name == "norm") {
 				result.setLocal(arg.matrix().norm());
 				return;
-			}
-			else if (evalFunction_1_lt(name, arg, result, has_operator_lt<typename Derived::Scalar>())) {
+			} else if (evalFunction_1_lt(name, arg, result, has_operator_lt<typename Derived::Scalar>())) {
 				return;
-			}
-			else if(name == "mean") {
+			} else if(name == "mean") {
 				result.setLocal(arg.matrix().mean());
 				return;
 			} else if(name == "sum") {
@@ -787,33 +805,62 @@ namespace EigenLab
 			} else if(name == "adjoint") {
 				result.local() = arg.matrix().adjoint();
 				result.mapLocal();
-				return;
+                return;
+            } else if(name == "zeros") {
+                if(arg.matrix().size() != 1)
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
+                int N = floor(std::real(arg.matrix()(0, 0)));
+                if(N <= 0 || N != std::real(arg.matrix()(0, 0)))
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
+                result.local() = Derived::Zero(N, N);
+                result.mapLocal();
+                return;
+            } else if(name == "ones") {
+                if(arg.matrix().size() != 1)
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
+                int N = floor(std::real(arg.matrix()(0, 0)));
+                if(N <= 0 || N != std::real(arg.matrix()(0, 0)))
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
+                result.local() = Derived::Ones(N, N);
+                result.mapLocal();
+                return;
+            } else if(name == "eye") {
+                if(arg.matrix().size() != 1)
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
+                int N = floor(std::real(arg.matrix()(0, 0)));
+                if(N <= 0 || N != std::real(arg.matrix()(0, 0)))
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
+                result.local() = Derived::Identity(N, N);
+                result.mapLocal();
+                return;
 			}
 			else {
 				throw std::runtime_error("Invalid function '" + name + "(" + args[0] + ")'.");
 			}
 		} else if(args.size() == 2) {
-			Value<Derived> arg0 = eval(args[0]);
-			ParserXi parseri;
-			ValueXi arg1 = parseri.eval(args[1]);
-			if(arg1.matrix().size() != 1)
-				throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
-			int dim = arg1.matrix()(0, 0);
-			if(dim != 0 && dim != 1)
-				throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
-			if(name == "size") {
+            Value<Derived> arg0 = eval(args[0]);
+            Value<Derived> arg1 = eval(args[1]);
+            if(name == "size") {
+                if(arg1.matrix().size() != 1)
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
+                int dim = floor(std::real(arg1.matrix()(0, 0)));
+                if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
 				if(dim == 0) {
 					result.setLocal((typename Derived::Scalar) arg0.matrix().rows());
 					return;
 				} else if(dim == 1) {
 					result.setLocal((typename Derived::Scalar) arg0.matrix().cols());
 					return;
-				}
-			}
-			else if (evalFunction_2_lt(name, arg0, dim, result, has_operator_lt<typename Derived::Scalar>())) {
+                }
+			} else if (evalFunction_2_lt(name, arg0, arg1, result, has_operator_lt<typename Derived::Scalar>())) {
 				return;
-			}
-			else if(name == "mean") {
+			} else if(name == "mean") {
+                if(arg1.matrix().size() != 1)
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
+                int dim = floor(std::real(arg1.matrix()(0, 0)));
+                if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
 				if(dim == 0) {
 					result.local() = arg0.matrix().colwise().mean();
 					result.mapLocal();
@@ -823,7 +870,12 @@ namespace EigenLab
 					result.mapLocal();
 					return;
 				}
-			} else if(name == "sum") {
+            } else if(name == "sum") {
+                if(arg1.matrix().size() != 1)
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
+                int dim = floor(std::real(arg1.matrix()(0, 0)));
+                if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
 				if(dim == 0) {
 					result.local() = arg0.matrix().colwise().sum();
 					result.mapLocal();
@@ -833,7 +885,12 @@ namespace EigenLab
 					result.mapLocal();
 					return;
 				}
-			} else if(name == "prod") {
+            } else if(name == "prod") {
+                if(arg1.matrix().size() != 1)
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
+                int dim = floor(std::real(arg1.matrix()(0, 0)));
+                if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
+                    throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
 				if(dim == 0) {
 					result.local() = arg0.matrix().colwise().prod();
 					result.mapLocal();
@@ -842,7 +899,37 @@ namespace EigenLab
 					result.local() = arg0.matrix().rowwise().prod();
 					result.mapLocal();
 					return;
-				}
+                }
+            } else if(name == "zeros") {
+                if((arg0.matrix().size() != 1) || (arg1.matrix().size() != 1))
+                    throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
+                int rows = floor(std::real(arg0.matrix()(0, 0)));
+                int cols = floor(std::real(arg1.matrix()(0, 0)));
+                if(rows <= 0 || cols <= 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)))
+                    throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
+                result.local() = Derived::Zero(rows, cols);
+                result.mapLocal();
+                return;
+            } else if(name == "ones") {
+                if((arg0.matrix().size() != 1) || (arg1.matrix().size() != 1))
+                    throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
+                int rows = floor(std::real(arg0.matrix()(0, 0)));
+                int cols = floor(std::real(arg1.matrix()(0, 0)));
+                if(rows <= 0 || cols <= 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)))
+                    throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
+                result.local() = Derived::Ones(rows, cols);
+                result.mapLocal();
+                return;
+            } else if(name == "eye") {
+                if((arg0.matrix().size() != 1) || (arg1.matrix().size() != 1))
+                    throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
+                int rows = floor(std::real(arg0.matrix()(0, 0)));
+                int cols = floor(std::real(arg1.matrix()(0, 0)));
+                if(rows <= 0 || cols <= 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)))
+                    throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
+                result.local() = Derived::Identity(rows, cols);
+                result.mapLocal();
+                return;
 			} else {
 				throw std::runtime_error("Invalid function '" + name + "(" + args[0] + "," + args[1] + ")'.");
 			}
@@ -2043,7 +2130,65 @@ namespace EigenLab
 		resultValue = eval("adjoint(a)");
 		resultMatrix = a34.adjoint();
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
-		else { std::cout << "FAIL" << std::endl; ++numFails; }
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+        
+        ////////////////////////////////////////
+        std::cout << std::endl << "Testing matrix initializers..." << std::endl << std::endl;
+        ////////////////////////////////////////
+        
+        std::cout << "Test zeros(5): ";
+        resultValue = eval("zeros(5)");
+        resultMatrix = Derived::Zero(5, 5);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+        
+        std::cout << "Test ones(5): ";
+        resultValue = eval("ones(5)");
+        resultMatrix = Derived::Ones(5, 5);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+        
+        std::cout << "Test eye(5): ";
+        resultValue = eval("eye(5)");
+        resultMatrix = Derived::Identity(5, 5);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+        
+        try {
+            std::cout << "Test zeros(5.2): ";
+            resultValue = eval("zeros(5.2)"); // <-- Should NOT succeed!!!
+            std::cout << "FAIL" << std::endl; ++numFails;
+        } catch(std::runtime_error &err) {
+            std::cout << err.what() << std::endl;
+            std::cout << "Exception caught, so we're OK" << std::endl;
+        }
+        
+        try {
+            std::cout << "Test eye(-3): ";
+            resultValue = eval("eye(-3)"); // <-- Should NOT succeed!!!
+            std::cout << "FAIL" << std::endl; ++numFails;
+        } catch(std::runtime_error &err) {
+            std::cout << err.what() << std::endl;
+            std::cout << "Exception caught, so we're OK" << std::endl;
+        }
+        
+        std::cout << "Test zeros(4,7): ";
+        resultValue = eval("zeros(4,7)");
+        resultMatrix = Derived::Zero(4, 7);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+        
+        std::cout << "Test ones(4,7): ";
+        resultValue = eval("ones(4,7)");
+        resultMatrix = Derived::Ones(4, 7);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+        
+        std::cout << "Test eye(4,7): ";
+        resultValue = eval("eye(4,7)");
+        resultMatrix = Derived::Identity(4, 7);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
 		////////////////////////////////////////
 		std::cout << std::endl << "Testing variable assignment..." << std::endl << std::endl;
