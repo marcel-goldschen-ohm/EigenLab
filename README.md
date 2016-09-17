@@ -558,15 +558,11 @@ If you need to re-evaluate the same expression multiple times, you can optionall
 Version History
 ===
 
-**2016**
+## beta version
 
-Thanks to Michael Tesch for adding some checks for handling complex matrices smoothly. Note, however, that although complex matrices can be used via shared variables, the string parser does not yet support inputing complex values.
+**August 26, 2014**
 
-### 1.0.0
-
-**August 21, 2015**
-
-### 0.9.0
+Initial beta release.
 
 **October 17, 2014**
 
@@ -584,6 +580,20 @@ Fixed subexpressions for numeric ranges. Previously, the expression "[1 + 2 : 3 
 
 Added simple performance comparison with muParser (see `SpeedTestEigenLabVsMuParser.cpp`). Thanks to Ilja Honkonen <ilja.j.honkonen@nasa.gov> on which this script was based.
 
-**August 26, 2014**
+## Version 0.9.0
 
-Initial beta release.
+**August 21, 2015**
+
+Released version 0.9.0.
+
+## Version 1.0.0
+
+**2016**
+
+Thanks to Michael Tesch for adding some checks for handling complex matrices smoothly. Note, however, that although complex matrices can be used via shared variables, the string parser does not yet support inputing complex values.
+
+Version 1.0.0 released.
+
+**September 17, 2016**
+
+Added support for zeros(), ones() and eye().
