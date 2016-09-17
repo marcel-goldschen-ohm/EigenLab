@@ -558,8 +558,6 @@ If you need to re-evaluate the same expression multiple times, you can optionall
 Version History
 ===
 
-## beta version
-
 **August 26, 2014**
 
 Initial beta release.
@@ -580,19 +578,15 @@ Fixed subexpressions for numeric ranges. Previously, the expression "[1 + 2 : 3 
 
 Added simple performance comparison with muParser (see `SpeedTestEigenLabVsMuParser.cpp`). Thanks to Ilja Honkonen <ilja.j.honkonen@nasa.gov> on which this script was based.
 
-## Version 0.9.0
-
 **August 21, 2015**
 
 Released version 0.9.0.
-
-## Version 1.0.0
 
 **2016**
 
 Thanks to Michael Tesch for adding some checks for handling complex matrices smoothly. Note, however, that although complex matrices can be used via shared variables, the string parser does not yet support inputing complex values.
 
-Version 1.0.0 released.
+Released version 1.0.0.
 
 **September 17, 2016**
 
