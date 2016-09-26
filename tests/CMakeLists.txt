@@ -16,6 +16,7 @@ include_directories ("${PROJECT_SOURCE_DIR}/..")
 include_directories ("${EIGEN3_INCLUDE_DIRS}")
 
 add_definitions (-DDEBUG)
+add_definitions (-D_GLIBCXX_DEBUG)
 add_executable (Test Test.cpp)
 
 enable_testing ()
