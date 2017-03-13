@@ -1,4 +1,4 @@
-// --*-  Mode: C++; c-basic-offset:8; indent-tabs-mode:t; tab-width:8 -*--
+// --*-  Mode: C++; c-basic-offset:4; indent-tabs-mode:t; tab-width:4 -*--
 // EigenLab
 // Version: 1.0.0
 // Author: Dr. Marcel Paz Goldschen-Ohm
@@ -263,12 +263,12 @@ namespace EigenLab
 		// Matrix operations.
 		mFunctions.push_back("transpose");
 		mFunctions.push_back("conjugate");
-        mFunctions.push_back("adjoint");
-        
-        // Matrix initializers.
-        mFunctions.push_back("zeros");
-        mFunctions.push_back("ones");
-        mFunctions.push_back("eye");
+		mFunctions.push_back("adjoint");
+
+		// Matrix initializers.
+		mFunctions.push_back("zeros");
+		mFunctions.push_back("ones");
+		mFunctions.push_back("eye");
 	}
 	
 	template <typename Derived>
@@ -805,7 +805,7 @@ namespace EigenLab
 			} else if(name == "adjoint") {
 				result.local() = arg.matrix().adjoint();
 				result.mapLocal();
-                return;
+				return;
             } else if(name == "zeros") {
                 if(arg.matrix().size() != 1)
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
@@ -838,8 +838,8 @@ namespace EigenLab
 				throw std::runtime_error("Invalid function '" + name + "(" + args[0] + ")'.");
 			}
 		} else if(args.size() == 2) {
-            Value<Derived> arg0 = eval(args[0]);
-            Value<Derived> arg1 = eval(args[1]);
+			Value<Derived> arg0 = eval(args[0]);
+			Value<Derived> arg1 = eval(args[1]);
             if(name == "size") {
                 if(arg1.matrix().size() != 1)
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
@@ -1073,10 +1073,9 @@ namespace EigenLab
 					rhs->value.mapLocal();
 					rhs->type = VALUE;
 				}
-				chunks.erase(op);
-				op = rhs + 1;
-				lhs = op - 1;
-				rhs = op + 1;
+				lhs = chunks.erase(op);
+				op = (lhs != chunks.end()) ? lhs + 1 : lhs;
+				rhs = (op != chunks.end()) ? op + 1 : op;
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
 				operationPerformed = true;
@@ -1143,7 +1142,7 @@ namespace EigenLab
 				}
 				chunks.erase(op, rhs + 1);
 				op = lhs + 1;
-				rhs = op + 1;
+				rhs = (op != chunks.end()) ? op + 1 : op;
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
 				operationPerformed = true;
@@ -1234,7 +1233,7 @@ namespace EigenLab
 				}
 				chunks.erase(op, rhs + 1);
 				op = lhs + 1;
-				rhs = op + 1;
+				rhs = (op != chunks.end()) ? op + 1 : op;
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
 				operationPerformed = true;
@@ -1316,7 +1315,7 @@ namespace EigenLab
 				}
 				chunks.erase(op, rhs + 1);
 				op = lhs + 1;
-				rhs = op + 1;
+				rhs = (op != chunks.end()) ? op + 1 : op;
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
 				operationPerformed = true;
@@ -1373,10 +1372,9 @@ namespace EigenLab
 						mVariables[lhs->field].mapLocal();
 					}
 				}
-				chunks.erase(op, rhs + 1);
-				rhs = lhs;
-				op = rhs - 1;
-				lhs = op - 1;
+				rhs = chunks.erase(op, rhs + 1);
+				op = (rhs != chunks.begin()) ? rhs - 1 : rhs;
+				if (op != chunks.begin()) lhs = op - 1;
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
 				operationPerformed = true;
