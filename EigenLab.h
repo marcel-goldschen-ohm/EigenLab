@@ -754,7 +754,8 @@ namespace EigenLab
 				result.mapLocal();
 				return;
 			} else if(name == "log10") {
-				result.local() = arg.matrix().array().log() * (1.0 / log(10));
+                result.local() = arg.matrix().array().log();
+                result.local() *= (1.0 / log(10));
 				result.mapLocal();
 				return;
 			} else if(name == "sin") {
