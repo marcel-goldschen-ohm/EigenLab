@@ -1520,11 +1520,11 @@ namespace EigenLab
 	template <typename Derived>
 	void
 	Parser<Derived>::test_w_lt(size_t & numFails,
-				   typename Derived::Scalar & s,
+				   typename Derived::Scalar & /* s */,
 				   Derived & a34,
-				   Derived & b34,
-				   Derived & c43,
-				   Derived & v, std::true_type)
+				   Derived & /* b34 */,
+				   Derived & /* c43 */,
+				   Derived & /* v */, std::true_type)
 	{
 		//
 		// tests that only work if Derived::Scalar has operator<
@@ -1599,12 +1599,12 @@ namespace EigenLab
 
 	template <typename Derived>
 	void
-	Parser<Derived>::test_w_lt(size_t & numFails,
-				   typename Derived::Scalar & s,
-				   Derived & a34,
-				   Derived & b34,
-				   Derived & c43,
-				   Derived & v, std::false_type)
+	Parser<Derived>::test_w_lt(size_t & /* numFails */,
+				   typename Derived::Scalar & /* s */,
+				   Derived & /* a34 */,
+				   Derived & /* b34 */,
+				   Derived & /* c43 */,
+				   Derived & /* v */, std::false_type)
 	{
 		// do nothing
 	}
