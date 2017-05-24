@@ -3,8 +3,8 @@ compiler:
   - gcc
   - clang
 
-#sudo: false
-sudo: required
+sudo: false
+#sudo: required
 dist: trusty
 
 addons:
@@ -13,10 +13,13 @@ addons:
     - ubuntu-toolchain-r-test
     packages:
     - cmake
-    - libeigen3-dev
     - gcc-4.9
     - g++-4.9
     - clang
+
+env:
+  - EIGEN_VERSION=3.2.10
+  - EIGEN_VERSION=3.3.3
 
 before_install:
   - ${CXX} --version;
@@ -25,7 +28,7 @@ before_install:
 install:
   - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9" CC="gcc-4.9"; fi
   - cd tests
-  - cmake .
+  - cmake . -DEIGEN_VERSION=${EIGEN_VERSION}
   - make VERBOSE=1
 
 script: 

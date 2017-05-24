@@ -332,8 +332,11 @@ namespace EigenLab
 				if(jt == expression.end())
 					throw std::runtime_error("Missing closing bracket for '" + std::string(it, jt) + "'.");
 				std::string field = std::string(it + 1, jt); // Outer brackets stripped.
-				if(prevType == VARIABLE)
+				if(prevType == VARIABLE) {
+					if(!isVariable(chunks.back().field))
+						throw std::runtime_error("Unknown variable '" + chunks.back().field + "'.");
 					chunks.back().value.setShared(var(chunks.back().field));
+				}
 				int first, last;
 				int rows = int(chunks.back().value.matrix().rows());
 				int cols = int(chunks.back().value.matrix().cols());
@@ -414,6 +417,30 @@ namespace EigenLab
 			} else {
 				// Non-operator: value range, number, function, or variable name.
 				std::string::const_iterator jt = it + 1;
+				// accept fp-strings, ie [+-]
+				unsigned char state = 1;
+				for(std::string::const_iterator kt = it; state && kt != expression.end(); kt++) {
+					unsigned char token;
+					if (*kt == ' ') token = 0;
+					else if (*kt == '+' || *kt == '-') token = 1;
+					else if (isdigit(*kt)) token = 2;
+					else if (*kt == '.') token = 3;
+					else if (*kt == 'e' || *kt == 'E') token = 4;
+					else break;
+					const static char nextstate[9][5] = {{0},
+														 {1, 2, 3, 4, 0},
+														 {0, 0, 3, 4, 0},
+														 {0, 0, 3, 5, 6},
+														 {0, 0, 5, 0, 0},
+														 {0, 0, 5, 0, 6},
+														 {0, 7, 8, 0, 0},
+														 {0, 0, 8, 0, 0},
+														 {0, 0, 8, 0, 0}};
+					//WARN("state=" << (int)state << " token(" << *kt << ")=" << (int)token
+					//	 << " nextstate = " << (int)nextstate[state][token] << "\n");
+					state = nextstate[state][token];
+					if (state == 8) jt = kt;
+				}
 				for(; jt != expression.end(); jt++) {
 					if(isOperator(*jt) || (jt + 1 != expression.end() && isOperator(std::string(jt, jt + 2))))
 						break;
@@ -2219,6 +2246,36 @@ namespace EigenLab
 		if(a34.block(0,1,2,2).isApprox(var("x").matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
+        try {
+            std::cout << "Test bad function call: ";
+            resultValue = eval("foobar(-3)"); // <-- Should NOT succeed!!!
+            std::cout << "FAIL" << std::endl; ++numFails;
+        } catch(std::runtime_error &err) {
+            std::cout << err.what() << std::endl;
+            std::cout << "Exception caught, so we're OK" << std::endl;
+        }
+		////////////////////////////////////////
+		std::cout << std::endl << "Testing fp parsing..." << std::endl << std::endl;
+		////////////////////////////////////////
+
+		std::cout << "Test assigning 1.2e-3: ";
+		resultValue = eval("s = 1.2e-3");
+		resultMatrix.setConstant(1, 1, typename Derived::Scalar(1.2e-3));
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test assigning 1.e3: ";
+		resultValue = eval("s = 1.e3");
+		resultMatrix.setConstant(1, 1, typename Derived::Scalar(1000));
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test assigning 12.34e05: ";
+		resultValue = eval("s = 12.34e05");
+		resultMatrix.setConstant(1, 1, typename Derived::Scalar(123.4e4));
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
 		std::cout << std::endl;
 		if(numFails == 0)
 			std::cout << "Successfully completed unit test for EigenLab with no failures." << std::endl;
