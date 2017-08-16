@@ -694,12 +694,12 @@ namespace EigenLab
 	template <typename Derived>
 	bool Parser<Derived>::evalFunction_2_lt(const std::string & name, Value<Derived> & arg0, Value<Derived> & arg1, Value<Derived> & result, std::true_type)
 	{
-        if(name == "min") {
-            if(arg1.matrix().size() != 1)
-                throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
-            int dim = floor(std::real(arg1.matrix()(0, 0)));
-            if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
-                throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
+		if(name == "min") {
+			if(arg1.matrix().size() != 1)
+				throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
+			int dim = floor(std::real(arg1.matrix()(0, 0)));
+			if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
+				throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
 			if(dim == 0) {
 				result.local() = arg0.matrix().colwise().minCoeff();
 				result.mapLocal();
@@ -709,12 +709,12 @@ namespace EigenLab
 				result.mapLocal();
 				return true;
 			}
-        } else if(name == "max") {
-            if(arg1.matrix().size() != 1)
-                throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
-            int dim = floor(std::real(arg1.matrix()(0, 0)));
-            if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
-                throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
+        	} else if(name == "max") {
+			if(arg1.matrix().size() != 1)
+				throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
+			int dim = floor(std::real(arg1.matrix()(0, 0)));
+			if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
+				throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
 			if(dim == 0) {
 				result.local() = arg0.matrix().colwise().maxCoeff();
 				result.mapLocal();
@@ -724,12 +724,12 @@ namespace EigenLab
 				result.mapLocal();
 				return true;
 			}
-        } else if(name == "absmax") {
-            if(arg1.matrix().size() != 1)
-                throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
-            int dim = floor(std::real(arg1.matrix()(0, 0)));
-            if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
-                throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
+		} else if(name == "absmax") {
+ 			if(arg1.matrix().size() != 1)
+				throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
+			int dim = floor(std::real(arg1.matrix()(0, 0)));
+			if((dim != 0 && dim != 1) || dim != std::real(arg1.matrix()(0, 0)))
+				throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
 			if(dim == 0) {
 				result.local() = arg0.matrix().colwise().maxCoeff();
 				result.mapLocal();
@@ -748,7 +748,33 @@ namespace EigenLab
 						result.matrix()(i) = minimum(i);
 				}
 				return true;
-            }
+			}
+		} else if (name == "cwiseMin") {
+			if (arg1.matrix().size() == 1) {
+				typename Derived::RealScalar arg1scalar = std::real(arg1.matrix()(0, 0));
+				result.local() = arg0.matrix().cwiseMin(arg1scalar);
+				result.mapLocal();
+				return true;
+			} else if (arg0.matrix().cols() == arg1.matrix().cols() && arg0.matrix().rows() == arg1.matrix().rows()) {
+				result.local() = arg0.matrix().cwiseMin(arg1.matrix());
+ 				result.mapLocal();
+ 				return true;
+			} else {
+				throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
+			}
+		} else if (name == "cwiseMax") {
+			if (arg1.matrix().size() == 1) {
+				typename Derived::RealScalar arg1scalar = std::real(arg1.matrix()(0, 0));
+				result.local() = arg0.matrix().cwiseMax(arg1scalar);
+        			result.mapLocal();
+ 				return true;
+			} else if (arg0.matrix().cols() == arg1.matrix().cols() && arg0.matrix().rows() == arg1.matrix().rows()) {
+				result.local() = arg0.matrix().cwiseMax(arg1.matrix());
+ 				result.mapLocal();
+				return true;
+			} else {
+				throw std::runtime_error("Invalid dimension argument for function '" + name + "(...)'.");
+			}
 		}
 		return false;
 	}
