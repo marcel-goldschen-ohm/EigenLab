@@ -255,6 +255,8 @@ namespace EigenLab
 			mFunctions.push_back("min");
 			mFunctions.push_back("max");
 			mFunctions.push_back("absmax");
+			mFunctions.push_back("cwiseMin");
+			mFunctions.push_back("cwiseMax");
 		}
 		mFunctions.push_back("mean");
 		mFunctions.push_back("sum");
@@ -1575,7 +1577,7 @@ namespace EigenLab
 	Parser<Derived>::test_w_lt(size_t & numFails,
 				   typename Derived::Scalar & /* s */,
 				   Derived & a34,
-				   Derived & /* b34 */,
+				   Derived & b34,
 				   Derived & /* c43 */,
 				   Derived & /* v */, std::true_type)
 	{
@@ -1646,6 +1648,18 @@ namespace EigenLab
 			if(std::abs(resultMatrix(i)) < std::abs(temp(i)))
 				resultMatrix(i) = temp(i);
 		}
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test cwiseMin(a, b): ";
+		resultValue = eval("cwiseMin(a, b)");
+		resultMatrix = a34.cwiseMin(b34);
+		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test cwiseMax(a, b): ";
+		resultValue = eval("cwiseMax(a, b)");
+		resultMatrix = a34.cwiseMax(b34);
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 	}
