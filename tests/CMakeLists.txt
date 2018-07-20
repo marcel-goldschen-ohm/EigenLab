@@ -63,10 +63,12 @@ set (CMAKE_CXX_COMPILER ${AFL_DIR}/afl-g++)
 
 add_executable (EigenLab EigenLab.cpp)
 add_dependencies (EigenLab eigenX)
+add_dependencies (EigenLab aflX)
 
 add_custom_target (fuzz
   COMMAND ${AFL_DIR}/afl-fuzz -i fuzz-data -o fuzz-out $<TARGET_FILE:EigenLab> -f @@
   )
+add_dependencies (fuzz EigenLab)
 
 
 enable_testing ()
