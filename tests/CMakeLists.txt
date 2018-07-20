@@ -37,6 +37,9 @@ add_definitions (-D_GLIBCXX_DEBUG)
 add_executable (Test Test.cpp)
 add_dependencies (Test eigenX)
 
+add_executable (CmdLine CmdLine.cpp)
+add_dependencies (CmdLine eigenX)
+
 #
 # Afl
 #
