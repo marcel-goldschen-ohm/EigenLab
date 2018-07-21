@@ -1423,7 +1423,7 @@ namespace EigenLab
 				}
 				if(lhs->type == VALUE) {
 					// this is odd
-					std::cerr << "Attempted operation '" + lhs->field + op->field + rhs->field + "' on non-lval '" + rhs->field + "'.";
+					//std::cerr << "Attempted operation '" + lhs->field + op->field + rhs->field + "' on non-lval '" + rhs->field + "'.";
 					lhs->value.local() = rhs->value.matrix();
 					lhs->value.mapLocal();
 				} else { //if(lhs->type == VARIABLE) {
@@ -1437,6 +1437,8 @@ namespace EigenLab
 								mVariables[lhs->field].mapLocal();
 							}
 						} else { //if(lhs->row0 != -1) {
+							if (lhs->rows != rhs->value.matrix().rows() || lhs->cols != rhs->value.matrix().cols())
+								throw std::runtime_error("Attempted assigment of sub-matrix '" + lhs->field + "' from wrong sized source '" + rhs->field + "'.");
 							lhs->value.matrix().block(lhs->row0, lhs->col0, lhs->rows, lhs->cols) = rhs->value.matrix();
 						}
 					} else {
@@ -2305,6 +2307,22 @@ namespace EigenLab
 		if(a34.block(0,1,2,2).isApprox(var("x").matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
+		std::cout << "Test assigning to a mis-sized submatrix block a(0:1,1:2) = [1 2 3]: ";
+		try {
+			resultValue = eval("a(0:1,1:2) = [1,2,3]");
+            std::cout << "FAIL" << std::endl; ++numFails;
+		} catch(std::runtime_error &err) {
+            std::cout << err.what() << std::endl;
+            std::cout << "Exception caught, so we're OK" << std::endl;
+        }
+#if 0
+		std::cout << "Test chained assignment a(0:1,1:2) = x = [1,2;3,4]: ";
+		resultValue = eval("x = a(0:1,1:2) = [5,6;7,8]");
+		if(a34.block(0,1,2,2).isApprox(var("x").matrix()) &&
+		   var("x").matrix().isApprox(resultValue.matrix()) &&
+		   a34.block(0,1,2,2).isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+#endif
         try {
             std::cout << "Test bad function call: ";
             resultValue = eval("foobar(-3)"); // <-- Should NOT succeed!!!
