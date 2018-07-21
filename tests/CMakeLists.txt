@@ -32,7 +32,9 @@ set (EIGEN3_INCLUDE_DIRS "${source_dir}")
 include_directories ("${PROJECT_SOURCE_DIR}/..")
 include_directories ("${EIGEN3_INCLUDE_DIRS}")
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-int-in-bool-context") # eigen 3.3.4
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-int-in-bool-context") # eigen 3.3.4
+endif ()
 add_definitions (-DDEBUG)
 add_definitions (-D_GLIBCXX_DEBUG)
 add_executable (Test Test.cpp)

@@ -1415,22 +1415,26 @@ namespace EigenLab
 		if(chunks.size() < 3) return;
 		typename ChunkArray::iterator rhs = chunks.end() - 1, op = rhs - 1, lhs = op - 1;
 		for(; op != chunks.begin() && rhs != chunks.begin();) {
-			if(op->type == OPERATOR && op->field == "=" && (lhs->type == VALUE || lhs->type == VARIABLE) && (rhs->type == VALUE || rhs->type == VARIABLE)) {
+			if(op->type == OPERATOR && op->field == "=") {
+				if((lhs->type != VALUE && lhs->type != VARIABLE) || (rhs->type != VALUE && rhs->type != VARIABLE)) {
+					throw std::runtime_error("Attempted invalid assignment '" + lhs->field + op->field + rhs->field + "'.");
+				}
 				if(rhs->type == VARIABLE) {
 					if(!isVariable(rhs->field))
 						throw std::runtime_error("Attempted operation '" + lhs->field + op->field + rhs->field + "' on uninitialized variable '" + rhs->field + "'.");
 					rhs->value.setShared(mVariables[rhs->field]);
 				}
 				if(lhs->type == VALUE) {
-					// this is odd
-					//std::cerr << "Attempted operation '" + lhs->field + op->field + rhs->field + "' on non-lval '" + rhs->field + "'.";
-					lhs->value.local() = rhs->value.matrix();
-					lhs->value.mapLocal();
+					// Nonsensical
+					throw std::runtime_error("Attempted assignment to non-lvalue '" + lhs->field + "' from '" + rhs->field + "'.");
+					//lhs->value.local() = rhs->value.matrix();
+					//lhs->value.mapLocal();
 				} else { //if(lhs->type == VARIABLE) {
 					if(isVariable(lhs->field)) {
 						lhs->value.setShared(mVariables[lhs->field]);
 						if(lhs->row0 == -1) {
-							if(lhs->value.matrix().rows() == rhs->value.matrix().rows() && lhs->value.matrix().cols() == rhs->value.matrix().cols()) {
+							if(lhs->value.matrix().rows() == rhs->value.matrix().rows() &&
+							   lhs->value.matrix().cols() == rhs->value.matrix().cols()) {
 								lhs->value.matrix() = rhs->value.matrix();
 							} else {
 								mVariables[lhs->field].local() = rhs->value.matrix();
@@ -1440,6 +1444,9 @@ namespace EigenLab
 							if (lhs->rows != rhs->value.matrix().rows() || lhs->cols != rhs->value.matrix().cols())
 								throw std::runtime_error("Attempted assigment of sub-matrix '" + lhs->field + "' from wrong sized source '" + rhs->field + "'.");
 							lhs->value.matrix().block(lhs->row0, lhs->col0, lhs->rows, lhs->cols) = rhs->value.matrix();
+							lhs->value.local() = rhs->value.matrix();
+							lhs->value.mapLocal();
+							lhs->type = VALUE;
 						}
 					} else {
 						mVariables[lhs->field].local() = rhs->value.matrix();
@@ -1448,7 +1455,7 @@ namespace EigenLab
 				}
 				rhs = chunks.erase(op, rhs + 1);
 				op = (rhs != chunks.begin()) ? rhs - 1 : rhs;
-				if (op != chunks.begin()) lhs = op - 1;
+				if(op != chunks.begin()) lhs = op - 1;
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
 				operationPerformed = true;
@@ -1457,7 +1464,7 @@ namespace EigenLab
 			} else {
 				rhs = op;
 				op = lhs;
-				lhs--;
+				if(op != chunks.begin()) lhs = op - 1;
 			}
 		}
 #ifdef DEBUG
@@ -2307,7 +2314,16 @@ namespace EigenLab
 		if(a34.block(0,1,2,2).isApprox(var("x").matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
-		std::cout << "Test assigning to a mis-sized submatrix block a(0:1,1:2) = [1 2 3]: ";
+		std::cout << "Test assigning to a constant 1 = 3: ";
+		try {
+			resultValue = eval("1 = 3");
+            std::cout << "FAIL" << std::endl; ++numFails;
+		} catch(std::runtime_error &err) {
+            std::cout << err.what() << std::endl;
+            std::cout << "Exception caught, so we're OK" << std::endl;
+        }
+
+		std::cout << "Test assigning to a mis-sized submatrix block a(0:1,1:2) = [1,2,3]: ";
 		try {
 			resultValue = eval("a(0:1,1:2) = [1,2,3]");
             std::cout << "FAIL" << std::endl; ++numFails;
@@ -2315,14 +2331,21 @@ namespace EigenLab
             std::cout << err.what() << std::endl;
             std::cout << "Exception caught, so we're OK" << std::endl;
         }
-#if 0
-		std::cout << "Test chained assignment a(0:1,1:2) = x = [1,2;3,4]: ";
+
+		std::cout << "Test chained assignment x = a(0:1,1:2) = [5,6;7,8]: ";
 		resultValue = eval("x = a(0:1,1:2) = [5,6;7,8]");
 		if(a34.block(0,1,2,2).isApprox(var("x").matrix()) &&
 		   var("x").matrix().isApprox(resultValue.matrix()) &&
 		   a34.block(0,1,2,2).isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
-#endif
+
+		std::cout << "Test chained assignment a(0:1,1:2) = x = [2,8;5,4]: ";
+		resultValue = eval("a(0:1,1:2) = x = [2,8;5,4]");
+		if(a34.block(0,1,2,2).isApprox(var("x").matrix()) &&
+		   var("x").matrix().isApprox(resultValue.matrix()) &&
+		   a34.block(0,1,2,2).isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
         try {
             std::cout << "Test bad function call: ";
             resultValue = eval("foobar(-3)"); // <-- Should NOT succeed!!!

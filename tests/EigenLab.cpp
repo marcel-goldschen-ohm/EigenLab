@@ -26,7 +26,7 @@ bool eval(ParserType & parser, const std::string & expr)
 	try {
 		size_t pos = 0;
 		while (pos < expr.size()) {
-			size_t end = expr.find_first_of(";", pos);
+			size_t end = expr.find_first_of("|", pos);
 			if (end == std::string::npos)
 				end = expr.size();
 			std::cout << parser.eval(expr.substr(pos, end-pos)).matrix() << "\n";
