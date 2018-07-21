@@ -520,6 +520,8 @@ namespace EigenLab
 				args.push_back(trim(std::string(i0, it)));
 				i0 = it + 1;
 			}
+			if (it == str.end())
+				break;
 		}
 		args.push_back(std::string(i0, str.end()));
 		return args;
