@@ -198,6 +198,7 @@ namespace EigenLab
 		
 		void evalNumericRange(const std::string & str, Value<Derived> & mat);
 		inline bool isVariable(const std::string & name) const { return mVariables.count(name) > 0; }
+		bool isBlockValid(const Derived & map, typename ChunkArray::iterator & it);
 		inline bool isOperator(const char c) const { return (std::find(mOperators1.begin(), mOperators1.end(), c) != mOperators1.end()); }
 		bool isOperator(const std::string & str) const;
 		inline bool isFunction(const std::string & str) const { return (std::find(mFunctions.begin(), mFunctions.end(), str) != mFunctions.end()); }
@@ -1104,7 +1105,19 @@ namespace EigenLab
 		}
 		return false;
 	}
-	
+
+	template <typename Derived>
+	bool Parser<Derived>::isBlockValid(const Derived & map, typename ChunkArray::iterator & it)
+	{
+		return
+			map.rows() >= it->row0 + it->rows &&
+			map.cols() >= it->col0 + it->cols &&
+			it->row0 >= 0 &&
+			it->col0 >= 0 &&
+			it->rows >= 0 &&
+			it->cols >= 0;
+	}
+
 	template <typename Derived>
 	void Parser<Derived>::evalIndices(ChunkArray & chunks)
 	{
@@ -1116,12 +1129,16 @@ namespace EigenLab
 		for(typename ChunkArray::iterator it = chunks.begin(); it != chunks.end(); it++) {
 			if(it->row0 != -1 && (it->type == VALUE || (it->type == VARIABLE && (it + 1 == chunks.end() || (it + 1)->type != OPERATOR || (it + 1)->field != "=")))) {
 				if(it->type == VALUE) {
+					if (!isBlockValid(it->value.local(), it))
+						throw std::runtime_error("Invalid submatrix bounds '" + it->field + "'.");
 					Derived temp = it->value.local().block(it->row0, it->col0, it->rows, it->cols);
 					it->value.local() = temp;
 					it->value.mapLocal();
 				} else { //if(it->type == VARIABLE) {
 					if(!isVariable(it->field))
 						throw std::runtime_error("Attempted indexing into uninitialized variable '" + it->field + "'.");
+					if (!isBlockValid(mVariables[it->field].matrix(), it))
+						throw std::runtime_error("Invalid submatrix bounds '" + it->field + "'.");
 					it->value.local() = mVariables[it->field].matrix().block(it->row0, it->col0, it->rows, it->cols);
 					it->value.mapLocal();
 					it->type = VALUE;
@@ -1465,6 +1482,8 @@ namespace EigenLab
 						} else { //if(lhs->row0 != -1) {
 							if (lhs->rows != rhs->value.matrix().rows() || lhs->cols != rhs->value.matrix().cols())
 								throw std::runtime_error("Attempted assigment of sub-matrix '" + lhs->field + "' from wrong sized source '" + rhs->field + "'.");
+							if (!isBlockValid(lhs->value.matrix(), lhs))
+								throw std::runtime_error("Invalid submatrix bounds '" + lhs->field + "'.");
 							lhs->value.matrix().block(lhs->row0, lhs->col0, lhs->rows, lhs->cols) = rhs->value.matrix();
 							lhs->value.local() = rhs->value.matrix();
 							lhs->value.mapLocal();
@@ -1982,7 +2001,16 @@ namespace EigenLab
 		resultMatrix = a34.block(1, 2, 2, 2);
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
-		
+
+		try {
+			std::cout << "Test invalid submatrix block access: a(1:2,2:8)";
+			resultValue = eval("a(1:2,2:8)"); // <-- Should NOT succeed!!!
+			std::cout << "FAIL" << std::endl; ++numFails;
+		} catch(std::runtime_error &err) {
+			std::cout << err.what() << std::endl;
+			std::cout << "Exception caught, so we're OK" << std::endl;
+		}
+
 		std::cout << "Test submatrix block access using 'end' and ':' identifiers a(i:end,:): ";
 		resultValue = eval("a(1:end,:)");
 		resultMatrix = a34.block(1, 0, a34.rows() - 1, a34.cols());
