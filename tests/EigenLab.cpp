@@ -6,7 +6,11 @@
 // Copyright (c) 2018 by Michael Tesch
 // Licence: MIT
 //----------------------------------------
+#include <regex>
 #include <getopt.h>
+
+int eigenlab_debug = 0;
+#define EIGENLAB_DEBUG eigenlab_debug
 #include "EigenLab.h"
 
 //
@@ -20,7 +24,14 @@ typedef EigenLab::ParserXd ParserType;
 bool eval(ParserType & parser, const std::string & expr)
 {
 	try {
-		std::cout << parser.eval(expr).matrix() << "\n";
+		size_t pos = 0;
+		while (pos < expr.size()) {
+			size_t end = expr.find_first_of(";", pos);
+			if (end == std::string::npos)
+				end = expr.size();
+			std::cout << parser.eval(expr.substr(pos, end-pos)).matrix() << "\n";
+			pos = end + 1;
+		}
 	}
 	catch (std::exception & ex) {
 		std::cerr << "err:" << ex.what() << "\n";
@@ -28,7 +39,15 @@ bool eval(ParserType & parser, const std::string & expr)
 	return true;
 }
 
-
+void usage()
+{
+	std::cerr << "usage:\n"
+		" -e,--expr <expression>    | parse the given expression\n"
+		" -f,--file <filename>      | parse each line of filename as expression\n"
+		" -h,--help                 | print this help message and exit\n"
+		" -v,--verbose              | be more verbose\n";
+	exit(-1);
+}
 
 int main(int argc, char *argv[])
 {
@@ -37,13 +56,14 @@ int main(int argc, char *argv[])
 	while (1) {
 		int option_index = 0;
 		static struct option long_options[] = {
-			{"file", 	required_argument, 0,  'f' },
 			{"expr", 	required_argument, 0,  'e' },
+			{"file", 	required_argument, 0,  'f' },
+			{"help",    no_argument,       0,  'h' },
 			{"verbose", no_argument,       0,  'v' },
 			{0,         0,                 0,  0 }
 		};
 
-		int c = getopt_long(argc, argv, "f:e:v", long_options, &option_index);
+		int c = getopt_long(argc, argv, "e:f:hv", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -81,7 +101,13 @@ int main(int argc, char *argv[])
 			eval(parser, optarg);
 			break;
 
+		case 'v':
+			eigenlab_debug++;
+			break;
+
+		case 'h':
 		case '?':
+			usage();
 			break;
 
 		default:

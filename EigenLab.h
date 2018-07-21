@@ -25,7 +25,7 @@
 #endif
 
 #ifndef EIGENLAB_DEBUG
-//#	define EIGENLAB_DEBUG
+//#	define EIGENLAB_DEBUG 1
 #endif
 
 #ifdef DEBUG
@@ -143,14 +143,14 @@ namespace EigenLab
 		std::vector<std::string> mFunctions;
 		
 		// Expressions are parsed by first splitting them into chunks.
+		enum ChunkType { VALUE = 0, VARIABLE, OPERATOR, FUNCTION, NONE=-1 };
 		struct Chunk {
 			std::string field;
-			int type;
+			ChunkType type;
 			Value<Derived> value;
 			int row0, col0, rows, cols;
-			Chunk(const std::string & str = "", int t = -1, const Value<Derived> & val = Value<Derived>()) : field(str), type(t), value(val), row0(-1), col0(-1), rows(-1), cols(-1) {}
+			Chunk(const std::string & str = "", ChunkType t = NONE, const Value<Derived> & val = Value<Derived>()) : field(str), type(t), value(val), row0(-1), col0(-1), rows(-1), cols(-1) {}
 		};
-		enum ChunkType { VALUE = 0, VARIABLE, OPERATOR, FUNCTION };
 		typedef std::vector<Chunk> ChunkArray;
 		typedef typename Derived::Index Index;
 		bool mCacheChunkedExpressions;
@@ -278,8 +278,10 @@ namespace EigenLab
 	{
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		std::cout << "---" << std::endl;
-		std::cout << "EXPRESSION: " << expression << std::endl;
+		if (EIGENLAB_DEBUG) {
+			std::cout << "---" << std::endl;
+			std::cout << "EXPRESSION: " << expression << std::endl;
+		}
 #	endif
 #endif
 		ChunkArray chunks;
@@ -295,7 +297,9 @@ namespace EigenLab
 			throw std::runtime_error("Failed to reduce expression '" + expression + "' to a single value.");
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		std::cout << "---" << std::endl;
+		if (EIGENLAB_DEBUG) {
+			std::cout << "---" << std::endl;
+		}
 #	endif
 #endif
 		if(chunks[0].type == VARIABLE) {
@@ -314,7 +318,9 @@ namespace EigenLab
 				chunks = mCachedChunkedExpressions.at(expression);
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-				std::cout << "CACHED CHUNKS: "; printChunks(chunks); std::cout << std::endl;
+				if (EIGENLAB_DEBUG) {
+					std::cout << "CACHED CHUNKS: "; printChunks(chunks); std::cout << std::endl;
+				}
 #	endif
 #endif
 				return;
@@ -323,7 +329,7 @@ namespace EigenLab
 
 		for(std::string::const_iterator it = expression.begin(); it != expression.end();)
 		{
-			int prevType = (chunks.size() ? chunks.back().type : -1);
+			ChunkType prevType = (chunks.size() ? chunks.back().type : NONE);
 			char ci = (* it);
 			if(isspace(ci)) {
 				// Ignore whitespace.
@@ -479,8 +485,10 @@ namespace EigenLab
 		} // it
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		std::cout << "CHUNKS: "; printChunks(chunks); std::cout << std::endl;
-		std::cout << "CODE: " << code << std::endl;
+		if (EIGENLAB_DEBUG) {
+			std::cout << "CHUNKS: "; printChunks(chunks); std::cout << std::endl;
+			std::cout << "CODE: " << code << std::endl;
+		}
 #	endif
 #endif
 		if(cacheExpressions())
@@ -1107,7 +1115,7 @@ namespace EigenLab
 		}
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		if(operationPerformed) { std::cout << "i: "; printChunks(chunks); std::cout << std::endl; }
+		if(operationPerformed && EIGENLAB_DEBUG) { std::cout << "i: "; printChunks(chunks); std::cout << std::endl; }
 #	endif
 #endif
 	}
@@ -1149,7 +1157,7 @@ namespace EigenLab
 		}
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		if(operationPerformed) { std::cout << "-: "; printChunks(chunks); std::cout << std::endl; }
+		if(operationPerformed && EIGENLAB_DEBUG) { std::cout << "-: "; printChunks(chunks); std::cout << std::endl; }
 #	endif
 #endif
 	}
@@ -1216,7 +1224,7 @@ namespace EigenLab
 		}
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		if(operationPerformed) { std::cout << "^: "; printChunks(chunks); std::cout << std::endl; }
+		if(operationPerformed && EIGENLAB_DEBUG) { std::cout << "^: "; printChunks(chunks); std::cout << std::endl; }
 #	endif
 #endif
 	}
@@ -1307,7 +1315,7 @@ namespace EigenLab
 		}
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		if(operationPerformed) { std::cout << "*: "; printChunks(chunks); std::cout << std::endl; }
+		if(operationPerformed && EIGENLAB_DEBUG) { std::cout << "*: "; printChunks(chunks); std::cout << std::endl; }
 #	endif
 #endif
 	}
@@ -1389,7 +1397,7 @@ namespace EigenLab
 		}
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		if(operationPerformed) { std::cout << "+: "; printChunks(chunks); std::cout << std::endl; }
+		if(operationPerformed && EIGENLAB_DEBUG) { std::cout << "+: "; printChunks(chunks); std::cout << std::endl; }
 #	endif
 #endif
 	}
@@ -1412,6 +1420,8 @@ namespace EigenLab
 					rhs->value.setShared(mVariables[rhs->field]);
 				}
 				if(lhs->type == VALUE) {
+					// this is odd
+					std::cerr << "Attempted operation '" + lhs->field + op->field + rhs->field + "' on non-lval '" + rhs->field + "'.";
 					lhs->value.local() = rhs->value.matrix();
 					lhs->value.mapLocal();
 				} else { //if(lhs->type == VARIABLE) {
@@ -1448,7 +1458,7 @@ namespace EigenLab
 		}
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		if(operationPerformed) { std::cout << "=: "; printChunks(chunks); std::cout << std::endl; }
+		if(operationPerformed && EIGENLAB_DEBUG) { std::cout << "=: "; printChunks(chunks); std::cout << std::endl; }
 #	endif
 #endif
 	}
@@ -1476,6 +1486,9 @@ namespace EigenLab
 					break;
 				case FUNCTION:
 					std::cout << "f()=" << it->field;
+					break;
+				case NONE:
+					std::cout << "<void>" << it->field;
 					break;
 			}
 			std::cout << "__";
