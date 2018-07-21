@@ -404,6 +404,8 @@ namespace EigenLab
 				evalMatrixExpression(field, chunks.back().value);
 				code += (chunks.back().value.matrix().size() == 1 ? "n" : "M");
 				it = jt + 1;
+			} else if(ci == ')' || ci == ']') {
+				throw std::runtime_error("Unexpected closing '" + std::string(it, it+1) + "'.");
 			} else if(it + 1 != expression.end() && isOperator(std::string(it, it + 2))) {
 				// Double character operator.
 				std::string field = std::string(it, it + 2);
