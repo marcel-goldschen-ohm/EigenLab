@@ -10,7 +10,7 @@
 #include <getopt.h>
 
 int eigenlab_debug = 0;
-long int eigenlab_maxmatrix = 128*1024*1024; // 128 MB
+long int eigenlab_maxmatrix = 16*1024*1024; // 16 MB
 #define EIGENLAB_DEBUG eigenlab_debug
 #define EIGENLAB_MAXMATRIX eigenlab_maxmatrix
 #include "EigenLab.h"

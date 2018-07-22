@@ -1300,13 +1300,19 @@ namespace EigenLab
 					if(lhs->value.isLocal()) {
 						if(op->field == "*" || op->field == ".*")
 							lhs->value.local().array() *= rhs->value.matrix()(0, 0);
-						else // if(op->field == "/" || op->field == "./")
+						else { // if(op->field == "/" || op->field == "./")
+							if(Eigen::NumTraits<typename Derived::Scalar>::IsInteger && (rhs->value.matrix().array().abs()(0,0) == 0))
+								throw std::runtime_error("Attempted integer divide by 0");
 							lhs->value.local().array() /= rhs->value.matrix()(0, 0);
+						}
 					} else {
 						if(op->field == "*" || op->field == ".*")
 							lhs->value.local() = lhs->value.matrix().array() * rhs->value.matrix()(0, 0);
-						else // if(op->field == "/" || op->field == "./")
+						else { // if(op->field == "/" || op->field == "./")
+							if(Eigen::NumTraits<typename Derived::Scalar>::IsInteger && (rhs->value.matrix().array().abs() == 0).any())
+								throw std::runtime_error("Attempted integer divide by 0");
 							lhs->value.local() = lhs->value.matrix().array() / rhs->value.matrix()(0, 0);
+						}
 						lhs->value.mapLocal();
 						lhs->type = VALUE;
 					}
@@ -1314,21 +1320,30 @@ namespace EigenLab
 					typename Derived::Scalar temp = lhs->value.matrix()(0, 0);
 					if(op->field == "*" || op->field == ".*")
 						lhs->value.local() = rhs->value.matrix().array() * temp;
-					else // if(op->field == "/" || op->field == "./")
+					else {// if(op->field == "/" || op->field == "./")
+						if(Eigen::NumTraits<typename Derived::Scalar>::IsInteger && (rhs->value.matrix().array().abs() == 0).any())
+							throw std::runtime_error("Attempted integer divide by 0");
 						lhs->value.local() = Derived::Constant(rhs->value.matrix().rows(), rhs->value.matrix().cols(), temp).array() / rhs->value.matrix().array();
+					}
 					lhs->value.mapLocal();
 					lhs->type = VALUE;
 				} else if((op->field == ".*" || op->field == "./") && lhs->value.matrix().rows() == rhs->value.matrix().rows() && lhs->value.matrix().cols() == rhs->value.matrix().cols()) {
 					if(lhs->value.isLocal()) {
 						if(op->field == ".*")
 							lhs->value.local().array() *= rhs->value.matrix().array();
-						else // if(op->field == "./")
+						else { // if(op->field == "./")
+							if(Eigen::NumTraits<typename Derived::Scalar>::IsInteger && (rhs->value.matrix().array().abs() == 0).any())
+								throw std::runtime_error("Attempted integer divide by 0");
 							lhs->value.local().array() /= rhs->value.matrix().array();
+						}
 					} else {
 						if(op->field == ".*")
 							lhs->value.local() = lhs->value.matrix().array() * rhs->value.matrix().array();
-						else // if(op->field == "./")
+						else { // if(op->field == "./")
+							if(Eigen::NumTraits<typename Derived::Scalar>::IsInteger && (rhs->value.matrix().array().abs() == 0).any())
+								throw std::runtime_error("Attempted integer divide by 0");
 							lhs->value.local() = lhs->value.matrix().array() / rhs->value.matrix().array();
+						}
 						lhs->value.mapLocal();
 						lhs->type = VALUE;
 					}
