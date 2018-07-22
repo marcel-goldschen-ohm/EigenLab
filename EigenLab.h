@@ -694,7 +694,10 @@ namespace EigenLab
 	template <typename Derived>
 	bool Parser<Derived>::evalFunction_1_lt(const std::string & name, Value<Derived> & arg, Value<Derived> & result, std::true_type)
 	{
-		if(name == "min") {
+		if(arg.matrix().size()==0) {
+			result.setLocal(Derived());
+			return true;
+		} else if(name == "min") {
 			result.setLocal(arg.matrix().minCoeff());
 			return true;
 		} else if(name == "max") {
