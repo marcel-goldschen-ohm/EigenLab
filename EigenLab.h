@@ -1073,7 +1073,7 @@ namespace EigenLab
 			if(sfirst == slast) {
 				mat = sfirst;
 			} else if(sfirst < slast && sstep > 0) {
-				unsigned n = 1 + floor((slast - sfirst) / sstep);
+				long double n = 1 + floor((slast - sfirst) / sstep);
 				if (n < 0 || n > EIGENLAB_MAXMATRIX)
 					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(n) + "', set EIGENLAB_MAXMATRIX to allow larger matrices.");
 				mat.local().resize(1, n);
