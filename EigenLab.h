@@ -1284,6 +1284,8 @@ namespace EigenLab
 		typename ChunkArray::iterator lhs = chunks.begin(), op = lhs + 1, rhs = op + 1;
 		for(; lhs != chunks.end() && op != chunks.end() && rhs != chunks.end();) {
 			if((op->type == OPERATOR) && (op->field == "*" || op->field == "/" || op->field == ".*" || op->field == "./")) {
+				if((lhs->type != VALUE && lhs->type != VARIABLE) || (rhs->type != VALUE && rhs->type != VARIABLE))
+					throw std::runtime_error("Invalid operands '" + lhs->field + op->field + rhs->field + "'.");
 				if(lhs->type == VARIABLE) {
 					if(!isVariable(lhs->field))
 						throw std::runtime_error("Attempted operation '" + lhs->field + op->field + rhs->field + "' on uninitialized variable '" + lhs->field + "'.");
@@ -1375,6 +1377,8 @@ namespace EigenLab
 		typename ChunkArray::iterator lhs = chunks.begin(), op = lhs + 1, rhs = op + 1;
 		for(; lhs != chunks.end() && op != chunks.end() && rhs != chunks.end();) {
 			if((op->type == OPERATOR) && (op->field == "+" || op->field == "-" || op->field == ".+" || op->field == ".-")) {
+				if((lhs->type != VALUE && lhs->type != VARIABLE) || (rhs->type != VALUE && rhs->type != VARIABLE))
+					throw std::runtime_error("Invalid operands '" + lhs->field + op->field + rhs->field + "'.");
 				if(lhs->type == VARIABLE) {
 					if(!isVariable(lhs->field))
 						throw std::runtime_error("Attempted operation '" + lhs->field + op->field + rhs->field + "' on uninitialized variable '" + lhs->field + "'.");
