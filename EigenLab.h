@@ -1225,6 +1225,8 @@ namespace EigenLab
 						throw std::runtime_error("Attempted operation '" + lhs->field + op->field + rhs->field + "' on uninitialized variable '" + rhs->field + "'.");
 					rhs->value.setShared(mVariables[rhs->field]);
 				}
+				if(Eigen::NumTraits<typename Derived::Scalar>::IsInteger && Eigen::NumTraits<typename Derived::Scalar>::IsSigned && (rhs->value.matrix().array().real() < 0).any())
+					throw std::runtime_error("Invalid power of integer to negative value '" + rhs->field + "'.");
 				if(rhs->value.matrix().size() == 1) {
 					lhs->value.local() = lhs->value.matrix().array().pow(rhs->value.matrix()(0, 0));
 					lhs->value.mapLocal();
