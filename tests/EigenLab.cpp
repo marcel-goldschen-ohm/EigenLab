@@ -10,7 +10,9 @@
 #include <getopt.h>
 
 int eigenlab_debug = 0;
+long int eigenlab_maxmatrix = 128*1024*1024; // 128 MB
 #define EIGENLAB_DEBUG eigenlab_debug
+#define EIGENLAB_MAXMATRIX eigenlab_maxmatrix
 #include "EigenLab.h"
 
 //
@@ -44,6 +46,7 @@ void usage()
 	std::cerr << "usage:\n"
 		" -e,--expr <expression>    | parse the given expression\n"
 		" -f,--file <filename>      | parse each line of filename as expression\n"
+		" -l,--limit <bytes>        | limit matrices to this many bytes\n"
 		" -h,--help                 | print this help message and exit\n"
 		" -v,--verbose              | be more verbose\n";
 	exit(-1);
@@ -58,6 +61,7 @@ int main(int argc, char *argv[])
 		static struct option long_options[] = {
 			{"expr", 	required_argument, 0,  'e' },
 			{"file", 	required_argument, 0,  'f' },
+			{"limit", 	required_argument, 0,  'l' },
 			{"help",    no_argument,       0,  'h' },
 			{"verbose", no_argument,       0,  'v' },
 			{0,         0,                 0,  0 }
@@ -84,7 +88,7 @@ int main(int argc, char *argv[])
 				size_t len = 0;
 				ssize_t nread;
 				while ((nread = getline(&line, &len, fp)) != -1) {
-					printf("%s:\n", line);
+					printf(">> %s", line);
 					eval(parser, line);
 				}
 
@@ -99,6 +103,11 @@ int main(int argc, char *argv[])
 		case 'e':
 			printf("expression '%s'\n", optarg);
 			eval(parser, optarg);
+			break;
+
+		case 'l':
+			eigenlab_maxmatrix = atol(optarg);
+			printf("max matrix bytes '%s' = %ld\n", optarg, eigenlab_maxmatrix);
 			break;
 
 		case 'v':

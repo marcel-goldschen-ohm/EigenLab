@@ -30,7 +30,7 @@
 
 // Define EIGENLAB_MAXMATRIX to change the maximum matrix size
 #ifndef EIGENLAB_MAXMATRIX
-#	define EIGENLAB_MAXMATRIX ((unsigned long)2*1024*1024*1024) // 2 GiB
+#	define EIGENLAB_MAXMATRIX ((unsigned long)128*1024*1024) // 128 MiB
 #endif
 
 #ifdef DEBUG
@@ -1214,7 +1214,7 @@ namespace EigenLab
 		if(chunks.size() < 3) return;
 		typename ChunkArray::iterator lhs = chunks.begin(), op = lhs + 1, rhs = op + 1;
 		for(; lhs != chunks.end() && op != chunks.end() && rhs != chunks.end();) {
-			if((op->type == OPERATOR) && (op->field == "^" || op->field == ".^")) {
+			if((op->type == OPERATOR) && (op->field == "^" || op->field == ".^") && (lhs->type == VALUE || lhs->type == VARIABLE) && (rhs->type == VALUE || rhs->type == VARIABLE)) {
 				if(lhs->type == VARIABLE) {
 					if(!isVariable(lhs->field))
 						throw std::runtime_error("Attempted operation '" + lhs->field + op->field + rhs->field + "' on uninitialized variable '" + lhs->field + "'.");
