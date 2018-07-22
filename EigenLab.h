@@ -629,7 +629,7 @@ namespace EigenLab
 							submatrix.mapLocal();
 						} else if((slast - sfirst >= 0 && sstep > 0) || (slast - sfirst <= 0 && sstep < 0)) {
 							long double n = floor((slast - sfirst) / sstep) + 1;
-							if (n > EIGENLAB_MAXMATRIX)
+							if (n < 0 || n > EIGENLAB_MAXMATRIX)
 								throw std::runtime_error("Invalid matrix size requested '" + std::to_string(n) + "', set EIGENLAB_MAXMATRIX to allow larger matrices.");
 							submatrix.local().resize(1, n);
 							for(unsigned k = 0; k < n; ++k)
@@ -651,7 +651,7 @@ namespace EigenLab
 							submatrix.mapLocal();
 						} else if(slast - sfirst >= 0) {
 							long double n = floor(slast - sfirst) + 1;
-							if (n > EIGENLAB_MAXMATRIX)
+							if (n < 0 || n > EIGENLAB_MAXMATRIX)
 								throw std::runtime_error("Invalid matrix size requested '" + std::to_string(n) + "', set EIGENLAB_MAXMATRIX to allow larger matrices.");
 							submatrix.local().resize(1, n);
 							for(int k = 0; k < n; ++k)
@@ -902,10 +902,10 @@ namespace EigenLab
                 if(arg.matrix().size() != 1)
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
                 long double N = floor(std::real(arg.matrix()(0, 0)));
-				if (N*N > EIGENLAB_MAXMATRIX)
-					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(N) + "^2' set EIGENLAB_MAXMATRIX to allow larger matrices.");
                 if(N <= 0 || N != std::real(arg.matrix()(0, 0)))
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
+				if (N*N > EIGENLAB_MAXMATRIX)
+					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(N) + "^2' set EIGENLAB_MAXMATRIX to allow larger matrices.");
                 result.local() = Derived::Ones(N, N);
                 result.mapLocal();
                 return;
@@ -913,10 +913,10 @@ namespace EigenLab
                 if(arg.matrix().size() != 1)
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
                 long double N = floor(std::real(arg.matrix()(0, 0)));
-				if (N*N > EIGENLAB_MAXMATRIX)
-					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(N) + "^2' set EIGENLAB_MAXMATRIX to allow larger matrices.");
 				if(N <= 0 || N != std::real(arg.matrix()(0, 0)))
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
+				if (N*N > EIGENLAB_MAXMATRIX)
+					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(N) + "^2' set EIGENLAB_MAXMATRIX to allow larger matrices.");
                 result.local() = Derived::Identity(N, N);
                 result.mapLocal();
                 return;
@@ -1050,7 +1050,7 @@ namespace EigenLab
 			if(sfirst > slast)
 				throw std::runtime_error("Invalid numeric range '" + str + "'. Must not reverse.");
 			long double n = 1 + floor(slast - sfirst);
-			if (n > EIGENLAB_MAXMATRIX)
+			if (n < 0 || n > EIGENLAB_MAXMATRIX)
 				throw std::runtime_error("Invalid matrix size requested '" + std::to_string(n) + "', set EIGENLAB_MAXMATRIX to allow larger matrices.");
 			mat.local().resize(1, n);
 			for(unsigned i = 0; i < n; i++)
@@ -1074,7 +1074,7 @@ namespace EigenLab
 				mat = sfirst;
 			} else if(sfirst < slast && sstep > 0) {
 				unsigned n = 1 + floor((slast - sfirst) / sstep);
-				if (n > EIGENLAB_MAXMATRIX)
+				if (n < 0 || n > EIGENLAB_MAXMATRIX)
 					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(n) + "', set EIGENLAB_MAXMATRIX to allow larger matrices.");
 				mat.local().resize(1, n);
 				for(unsigned i = 0; i < n; i++)
@@ -1082,7 +1082,7 @@ namespace EigenLab
 				mat.mapLocal();
 			} else if(sfirst > slast && sstep < 0) {
 				long double n = 1 + floor((slast - sfirst) / sstep);
-				if (n > EIGENLAB_MAXMATRIX)
+				if (n < 0 || n > EIGENLAB_MAXMATRIX)
 					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(n) + "', set EIGENLAB_MAXMATRIX to allow larger matrices.");
 				mat.local().resize(1, n);
 				for(unsigned i = 0; i < n; i++)
