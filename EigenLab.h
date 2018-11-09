@@ -25,7 +25,12 @@
 #endif
 
 #ifndef EIGENLAB_DEBUG
-//#	define EIGENLAB_DEBUG
+//#	define EIGENLAB_DEBUG 1
+#endif
+
+// Define EIGENLAB_MAXMATRIX to change the maximum matrix size
+#ifndef EIGENLAB_MAXMATRIX
+#	define EIGENLAB_MAXMATRIX ((unsigned long)128*1024*1024) // 128 MiB
 #endif
 
 #ifdef DEBUG
@@ -143,14 +148,14 @@ namespace EigenLab
 		std::vector<std::string> mFunctions;
 		
 		// Expressions are parsed by first splitting them into chunks.
+		enum ChunkType { VALUE = 0, VARIABLE, OPERATOR, FUNCTION, NONE=-1 };
 		struct Chunk {
 			std::string field;
-			int type;
+			ChunkType type;
 			Value<Derived> value;
 			int row0, col0, rows, cols;
-			Chunk(const std::string & str = "", int t = -1, const Value<Derived> & val = Value<Derived>()) : field(str), type(t), value(val), row0(-1), col0(-1), rows(-1), cols(-1) {}
+			Chunk(const std::string & str = "", ChunkType t = NONE, const Value<Derived> & val = Value<Derived>()) : field(str), type(t), value(val), row0(-1), col0(-1), rows(-1), cols(-1) {}
 		};
-		enum ChunkType { VALUE = 0, VARIABLE, OPERATOR, FUNCTION };
 		typedef std::vector<Chunk> ChunkArray;
 		typedef typename Derived::Index Index;
 		bool mCacheChunkedExpressions;
@@ -193,6 +198,7 @@ namespace EigenLab
 		
 		void evalNumericRange(const std::string & str, Value<Derived> & mat);
 		inline bool isVariable(const std::string & name) const { return mVariables.count(name) > 0; }
+		bool isBlockValid(const Derived & map, typename ChunkArray::iterator & it);
 		inline bool isOperator(const char c) const { return (std::find(mOperators1.begin(), mOperators1.end(), c) != mOperators1.end()); }
 		bool isOperator(const std::string & str) const;
 		inline bool isFunction(const std::string & str) const { return (std::find(mFunctions.begin(), mFunctions.end(), str) != mFunctions.end()); }
@@ -278,8 +284,10 @@ namespace EigenLab
 	{
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		std::cout << "---" << std::endl;
-		std::cout << "EXPRESSION: " << expression << std::endl;
+		if (EIGENLAB_DEBUG) {
+			std::cout << "---" << std::endl;
+			std::cout << "EXPRESSION: " << expression << std::endl;
+		}
 #	endif
 #endif
 		ChunkArray chunks;
@@ -295,7 +303,9 @@ namespace EigenLab
 			throw std::runtime_error("Failed to reduce expression '" + expression + "' to a single value.");
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		std::cout << "---" << std::endl;
+		if (EIGENLAB_DEBUG) {
+			std::cout << "---" << std::endl;
+		}
 #	endif
 #endif
 		if(chunks[0].type == VARIABLE) {
@@ -314,7 +324,9 @@ namespace EigenLab
 				chunks = mCachedChunkedExpressions.at(expression);
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-				std::cout << "CACHED CHUNKS: "; printChunks(chunks); std::cout << std::endl;
+				if (EIGENLAB_DEBUG) {
+					std::cout << "CACHED CHUNKS: "; printChunks(chunks); std::cout << std::endl;
+				}
 #	endif
 #endif
 				return;
@@ -323,7 +335,7 @@ namespace EigenLab
 
 		for(std::string::const_iterator it = expression.begin(); it != expression.end();)
 		{
-			int prevType = (chunks.size() ? chunks.back().type : -1);
+			ChunkType prevType = (chunks.size() ? chunks.back().type : NONE);
 			char ci = (* it);
 			if(isspace(ci)) {
 				// Ignore whitespace.
@@ -404,6 +416,8 @@ namespace EigenLab
 				evalMatrixExpression(field, chunks.back().value);
 				code += (chunks.back().value.matrix().size() == 1 ? "n" : "M");
 				it = jt + 1;
+			} else if(ci == ')' || ci == ']') {
+				throw std::runtime_error("Unexpected closing '" + std::string(it, it+1) + "'.");
 			} else if(it + 1 != expression.end() && isOperator(std::string(it, it + 2))) {
 				// Double character operator.
 				std::string field = std::string(it, it + 2);
@@ -477,8 +491,10 @@ namespace EigenLab
 		} // it
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		std::cout << "CHUNKS: "; printChunks(chunks); std::cout << std::endl;
-		std::cout << "CODE: " << code << std::endl;
+		if (EIGENLAB_DEBUG) {
+			std::cout << "CHUNKS: "; printChunks(chunks); std::cout << std::endl;
+			std::cout << "CODE: " << code << std::endl;
+		}
 #	endif
 #endif
 		if(cacheExpressions())
@@ -510,6 +526,8 @@ namespace EigenLab
 				args.push_back(trim(std::string(i0, it)));
 				i0 = it + 1;
 			}
+			if (it == str.end())
+				break;
 		}
 		args.push_back(std::string(i0, str.end()));
 		return args;
@@ -610,9 +628,11 @@ namespace EigenLab
 							submatrix.local().setConstant(1, 1, sfirst);
 							submatrix.mapLocal();
 						} else if((slast - sfirst >= 0 && sstep > 0) || (slast - sfirst <= 0 && sstep < 0)) {
-							int n = floor((slast - sfirst) / sstep) + 1;
+							long double n = floor((slast - sfirst) / sstep) + 1;
+							if (n < 0 || n > EIGENLAB_MAXMATRIX)
+								throw std::runtime_error("Invalid matrix size requested '" + std::to_string(n) + "', set EIGENLAB_MAXMATRIX to allow larger matrices.");
 							submatrix.local().resize(1, n);
-							for(int k = 0; k < n; ++k)
+							for(unsigned k = 0; k < n; ++k)
 								submatrix.local()(0, k) = sfirst + k * sstep;
 							submatrix.mapLocal();
 						} else {
@@ -630,7 +650,9 @@ namespace EigenLab
 							submatrix.local().setConstant(1, 1, sfirst);
 							submatrix.mapLocal();
 						} else if(slast - sfirst >= 0) {
-							int n = floor(slast - sfirst) + 1;
+							long double n = floor(slast - sfirst) + 1;
+							if (n < 0 || n > EIGENLAB_MAXMATRIX)
+								throw std::runtime_error("Invalid matrix size requested '" + std::to_string(n) + "', set EIGENLAB_MAXMATRIX to allow larger matrices.");
 							submatrix.local().resize(1, n);
 							for(int k = 0; k < n; ++k)
 								submatrix.local()(0, k) = sfirst + k;
@@ -672,7 +694,10 @@ namespace EigenLab
 	template <typename Derived>
 	bool Parser<Derived>::evalFunction_1_lt(const std::string & name, Value<Derived> & arg, Value<Derived> & result, std::true_type)
 	{
-		if(name == "min") {
+		if(arg.matrix().size()==0) {
+			result.setLocal(Derived());
+			return true;
+		} else if(name == "min") {
 			result.setLocal(arg.matrix().minCoeff());
 			return true;
 		} else if(name == "max") {
@@ -867,27 +892,34 @@ namespace EigenLab
             } else if(name == "zeros") {
                 if(arg.matrix().size() != 1)
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
-                int N = floor(std::real(arg.matrix()(0, 0)));
+                long double N = floor(std::real(arg.matrix()(0, 0)));
                 if(N <= 0 || N != std::real(arg.matrix()(0, 0)))
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
+				if (N*N > EIGENLAB_MAXMATRIX)
+					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(N) + "^2' set EIGENLAB_MAXMATRIX to allow larger matrices.");
+
                 result.local() = Derived::Zero(N, N);
                 result.mapLocal();
                 return;
             } else if(name == "ones") {
                 if(arg.matrix().size() != 1)
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
-                int N = floor(std::real(arg.matrix()(0, 0)));
+                long double N = floor(std::real(arg.matrix()(0, 0)));
                 if(N <= 0 || N != std::real(arg.matrix()(0, 0)))
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
+				if (N*N > EIGENLAB_MAXMATRIX)
+					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(N) + "^2' set EIGENLAB_MAXMATRIX to allow larger matrices.");
                 result.local() = Derived::Ones(N, N);
                 result.mapLocal();
                 return;
             } else if(name == "eye") {
                 if(arg.matrix().size() != 1)
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
-                int N = floor(std::real(arg.matrix()(0, 0)));
-                if(N <= 0 || N != std::real(arg.matrix()(0, 0)))
+                long double N = floor(std::real(arg.matrix()(0, 0)));
+				if(N <= 0 || N != std::real(arg.matrix()(0, 0)))
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
+				if (N*N > EIGENLAB_MAXMATRIX)
+					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(N) + "^2' set EIGENLAB_MAXMATRIX to allow larger matrices.");
                 result.local() = Derived::Identity(N, N);
                 result.mapLocal();
                 return;
@@ -961,9 +993,9 @@ namespace EigenLab
             } else if(name == "zeros") {
                 if((arg0.matrix().size() != 1) || (arg1.matrix().size() != 1))
                     throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
-                int rows = floor(std::real(arg0.matrix()(0, 0)));
-                int cols = floor(std::real(arg1.matrix()(0, 0)));
-                if(rows <= 0 || cols <= 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)))
+                long int rows = floor(std::real(arg0.matrix()(0, 0)));
+                long int cols = floor(std::real(arg1.matrix()(0, 0)));
+                if(rows <= 0 || cols <= 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)) || (long double)rows*cols > EIGENLAB_MAXMATRIX)
                     throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
                 result.local() = Derived::Zero(rows, cols);
                 result.mapLocal();
@@ -971,9 +1003,9 @@ namespace EigenLab
             } else if(name == "ones") {
                 if((arg0.matrix().size() != 1) || (arg1.matrix().size() != 1))
                     throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
-                int rows = floor(std::real(arg0.matrix()(0, 0)));
-                int cols = floor(std::real(arg1.matrix()(0, 0)));
-                if(rows <= 0 || cols <= 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)))
+                long int rows = floor(std::real(arg0.matrix()(0, 0)));
+                long int cols = floor(std::real(arg1.matrix()(0, 0)));
+                if(rows <= 0 || cols <= 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)) || (long double)rows*cols > EIGENLAB_MAXMATRIX)
                     throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
                 result.local() = Derived::Ones(rows, cols);
                 result.mapLocal();
@@ -981,9 +1013,9 @@ namespace EigenLab
             } else if(name == "eye") {
                 if((arg0.matrix().size() != 1) || (arg1.matrix().size() != 1))
                     throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
-                int rows = floor(std::real(arg0.matrix()(0, 0)));
-                int cols = floor(std::real(arg1.matrix()(0, 0)));
-                if(rows <= 0 || cols <= 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)))
+                long int rows = floor(std::real(arg0.matrix()(0, 0)));
+                long int cols = floor(std::real(arg1.matrix()(0, 0)));
+                if(rows <= 0 || cols <= 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)) || (long double)rows*cols > EIGENLAB_MAXMATRIX)
                     throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
                 result.local() = Derived::Identity(rows, cols);
                 result.mapLocal();
@@ -1020,9 +1052,11 @@ namespace EigenLab
 			typename Derived::RealScalar slast = std::real(last.matrix()(0,0));
 			if(sfirst > slast)
 				throw std::runtime_error("Invalid numeric range '" + str + "'. Must not reverse.");
-			int n = 1 + floor(slast - sfirst);
+			long double n = 1 + floor(slast - sfirst);
+			if (n < 0 || n > EIGENLAB_MAXMATRIX)
+				throw std::runtime_error("Invalid matrix size requested '" + std::to_string(n) + "', set EIGENLAB_MAXMATRIX to allow larger matrices.");
 			mat.local().resize(1, n);
-			for(int i = 0; i < n; i++)
+			for(unsigned i = 0; i < n; i++)
 				mat.local()(0, i) = sfirst + i;
 			mat.mapLocal();
 		} else {
@@ -1042,15 +1076,19 @@ namespace EigenLab
 			if(sfirst == slast) {
 				mat = sfirst;
 			} else if(sfirst < slast && sstep > 0) {
-				int n = 1 + floor((slast - sfirst) / sstep);
+				long double n = 1 + floor((slast - sfirst) / sstep);
+				if (n < 0 || n > EIGENLAB_MAXMATRIX)
+					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(n) + "', set EIGENLAB_MAXMATRIX to allow larger matrices.");
 				mat.local().resize(1, n);
-				for(int i = 0; i < n; i++)
+				for(unsigned i = 0; i < n; i++)
 					mat.local()(0, i) = sfirst + i * sstep;
 				mat.mapLocal();
 			} else if(sfirst > slast && sstep < 0) {
-				int n = 1 + floor((slast - sfirst) / sstep);
+				long double n = 1 + floor((slast - sfirst) / sstep);
+				if (n < 0 || n > EIGENLAB_MAXMATRIX)
+					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(n) + "', set EIGENLAB_MAXMATRIX to allow larger matrices.");
 				mat.local().resize(1, n);
-				for(int i = 0; i < n; i++)
+				for(unsigned i = 0; i < n; i++)
 					mat.local()(0, i) = sfirst + i * sstep;
 				mat.mapLocal();
 			} else {
@@ -1070,7 +1108,19 @@ namespace EigenLab
 		}
 		return false;
 	}
-	
+
+	template <typename Derived>
+	bool Parser<Derived>::isBlockValid(const Derived & map, typename ChunkArray::iterator & it)
+	{
+		return
+			map.rows() >= it->row0 + it->rows &&
+			map.cols() >= it->col0 + it->cols &&
+			it->row0 >= 0 &&
+			it->col0 >= 0 &&
+			it->rows >= 0 &&
+			it->cols >= 0;
+	}
+
 	template <typename Derived>
 	void Parser<Derived>::evalIndices(ChunkArray & chunks)
 	{
@@ -1082,12 +1132,16 @@ namespace EigenLab
 		for(typename ChunkArray::iterator it = chunks.begin(); it != chunks.end(); it++) {
 			if(it->row0 != -1 && (it->type == VALUE || (it->type == VARIABLE && (it + 1 == chunks.end() || (it + 1)->type != OPERATOR || (it + 1)->field != "=")))) {
 				if(it->type == VALUE) {
+					if (!isBlockValid(it->value.local(), it))
+						throw std::runtime_error("Invalid submatrix bounds '" + it->field + "'.");
 					Derived temp = it->value.local().block(it->row0, it->col0, it->rows, it->cols);
 					it->value.local() = temp;
 					it->value.mapLocal();
 				} else { //if(it->type == VARIABLE) {
 					if(!isVariable(it->field))
 						throw std::runtime_error("Attempted indexing into uninitialized variable '" + it->field + "'.");
+					if (!isBlockValid(mVariables[it->field].matrix(), it))
+						throw std::runtime_error("Invalid submatrix bounds '" + it->field + "'.");
 					it->value.local() = mVariables[it->field].matrix().block(it->row0, it->col0, it->rows, it->cols);
 					it->value.mapLocal();
 					it->type = VALUE;
@@ -1105,7 +1159,7 @@ namespace EigenLab
 		}
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		if(operationPerformed) { std::cout << "i: "; printChunks(chunks); std::cout << std::endl; }
+		if(operationPerformed && EIGENLAB_DEBUG) { std::cout << "i: "; printChunks(chunks); std::cout << std::endl; }
 #	endif
 #endif
 	}
@@ -1147,7 +1201,7 @@ namespace EigenLab
 		}
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		if(operationPerformed) { std::cout << "-: "; printChunks(chunks); std::cout << std::endl; }
+		if(operationPerformed && EIGENLAB_DEBUG) { std::cout << "-: "; printChunks(chunks); std::cout << std::endl; }
 #	endif
 #endif
 	}
@@ -1163,7 +1217,7 @@ namespace EigenLab
 		if(chunks.size() < 3) return;
 		typename ChunkArray::iterator lhs = chunks.begin(), op = lhs + 1, rhs = op + 1;
 		for(; lhs != chunks.end() && op != chunks.end() && rhs != chunks.end();) {
-			if((op->type == OPERATOR) && (op->field == "^" || op->field == ".^")) {
+			if((op->type == OPERATOR) && (op->field == "^" || op->field == ".^") && (lhs->type == VALUE || lhs->type == VARIABLE) && (rhs->type == VALUE || rhs->type == VARIABLE)) {
 				if(lhs->type == VARIABLE) {
 					if(!isVariable(lhs->field))
 						throw std::runtime_error("Attempted operation '" + lhs->field + op->field + rhs->field + "' on uninitialized variable '" + lhs->field + "'.");
@@ -1174,6 +1228,8 @@ namespace EigenLab
 						throw std::runtime_error("Attempted operation '" + lhs->field + op->field + rhs->field + "' on uninitialized variable '" + rhs->field + "'.");
 					rhs->value.setShared(mVariables[rhs->field]);
 				}
+				if(Eigen::NumTraits<typename Derived::Scalar>::IsInteger && Eigen::NumTraits<typename Derived::Scalar>::IsSigned && (rhs->value.matrix().array().real() < 0).any())
+					throw std::runtime_error("Invalid power of integer to negative value '" + rhs->field + "'.");
 				if(rhs->value.matrix().size() == 1) {
 					lhs->value.local() = lhs->value.matrix().array().pow(rhs->value.matrix()(0, 0));
 					lhs->value.mapLocal();
@@ -1214,7 +1270,7 @@ namespace EigenLab
 		}
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		if(operationPerformed) { std::cout << "^: "; printChunks(chunks); std::cout << std::endl; }
+		if(operationPerformed && EIGENLAB_DEBUG) { std::cout << "^: "; printChunks(chunks); std::cout << std::endl; }
 #	endif
 #endif
 	}
@@ -1231,6 +1287,8 @@ namespace EigenLab
 		typename ChunkArray::iterator lhs = chunks.begin(), op = lhs + 1, rhs = op + 1;
 		for(; lhs != chunks.end() && op != chunks.end() && rhs != chunks.end();) {
 			if((op->type == OPERATOR) && (op->field == "*" || op->field == "/" || op->field == ".*" || op->field == "./")) {
+				if((lhs->type != VALUE && lhs->type != VARIABLE) || (rhs->type != VALUE && rhs->type != VARIABLE))
+					throw std::runtime_error("Invalid operands '" + lhs->field + op->field + rhs->field + "'.");
 				if(lhs->type == VARIABLE) {
 					if(!isVariable(lhs->field))
 						throw std::runtime_error("Attempted operation '" + lhs->field + op->field + rhs->field + "' on uninitialized variable '" + lhs->field + "'.");
@@ -1245,13 +1303,19 @@ namespace EigenLab
 					if(lhs->value.isLocal()) {
 						if(op->field == "*" || op->field == ".*")
 							lhs->value.local().array() *= rhs->value.matrix()(0, 0);
-						else // if(op->field == "/" || op->field == "./")
+						else { // if(op->field == "/" || op->field == "./")
+							if(Eigen::NumTraits<typename Derived::Scalar>::IsInteger && (rhs->value.matrix().array().abs()(0,0) == 0))
+								throw std::runtime_error("Attempted integer divide by 0");
 							lhs->value.local().array() /= rhs->value.matrix()(0, 0);
+						}
 					} else {
 						if(op->field == "*" || op->field == ".*")
 							lhs->value.local() = lhs->value.matrix().array() * rhs->value.matrix()(0, 0);
-						else // if(op->field == "/" || op->field == "./")
+						else { // if(op->field == "/" || op->field == "./")
+							if(Eigen::NumTraits<typename Derived::Scalar>::IsInteger && (rhs->value.matrix().array().abs() == 0).any())
+								throw std::runtime_error("Attempted integer divide by 0");
 							lhs->value.local() = lhs->value.matrix().array() / rhs->value.matrix()(0, 0);
+						}
 						lhs->value.mapLocal();
 						lhs->type = VALUE;
 					}
@@ -1259,21 +1323,30 @@ namespace EigenLab
 					typename Derived::Scalar temp = lhs->value.matrix()(0, 0);
 					if(op->field == "*" || op->field == ".*")
 						lhs->value.local() = rhs->value.matrix().array() * temp;
-					else // if(op->field == "/" || op->field == "./")
+					else {// if(op->field == "/" || op->field == "./")
+						if(Eigen::NumTraits<typename Derived::Scalar>::IsInteger && (rhs->value.matrix().array().abs() == 0).any())
+							throw std::runtime_error("Attempted integer divide by 0");
 						lhs->value.local() = Derived::Constant(rhs->value.matrix().rows(), rhs->value.matrix().cols(), temp).array() / rhs->value.matrix().array();
+					}
 					lhs->value.mapLocal();
 					lhs->type = VALUE;
 				} else if((op->field == ".*" || op->field == "./") && lhs->value.matrix().rows() == rhs->value.matrix().rows() && lhs->value.matrix().cols() == rhs->value.matrix().cols()) {
 					if(lhs->value.isLocal()) {
 						if(op->field == ".*")
 							lhs->value.local().array() *= rhs->value.matrix().array();
-						else // if(op->field == "./")
+						else { // if(op->field == "./")
+							if(Eigen::NumTraits<typename Derived::Scalar>::IsInteger && (rhs->value.matrix().array().abs() == 0).any())
+								throw std::runtime_error("Attempted integer divide by 0");
 							lhs->value.local().array() /= rhs->value.matrix().array();
+						}
 					} else {
 						if(op->field == ".*")
 							lhs->value.local() = lhs->value.matrix().array() * rhs->value.matrix().array();
-						else // if(op->field == "./")
+						else { // if(op->field == "./")
+							if(Eigen::NumTraits<typename Derived::Scalar>::IsInteger && (rhs->value.matrix().array().abs() == 0).any())
+								throw std::runtime_error("Attempted integer divide by 0");
 							lhs->value.local() = lhs->value.matrix().array() / rhs->value.matrix().array();
+						}
 						lhs->value.mapLocal();
 						lhs->type = VALUE;
 					}
@@ -1305,7 +1378,7 @@ namespace EigenLab
 		}
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		if(operationPerformed) { std::cout << "*: "; printChunks(chunks); std::cout << std::endl; }
+		if(operationPerformed && EIGENLAB_DEBUG) { std::cout << "*: "; printChunks(chunks); std::cout << std::endl; }
 #	endif
 #endif
 	}
@@ -1322,6 +1395,8 @@ namespace EigenLab
 		typename ChunkArray::iterator lhs = chunks.begin(), op = lhs + 1, rhs = op + 1;
 		for(; lhs != chunks.end() && op != chunks.end() && rhs != chunks.end();) {
 			if((op->type == OPERATOR) && (op->field == "+" || op->field == "-" || op->field == ".+" || op->field == ".-")) {
+				if((lhs->type != VALUE && lhs->type != VARIABLE) || (rhs->type != VALUE && rhs->type != VARIABLE))
+					throw std::runtime_error("Invalid operands '" + lhs->field + op->field + rhs->field + "'.");
 				if(lhs->type == VARIABLE) {
 					if(!isVariable(lhs->field))
 						throw std::runtime_error("Attempted operation '" + lhs->field + op->field + rhs->field + "' on uninitialized variable '" + lhs->field + "'.");
@@ -1387,7 +1462,7 @@ namespace EigenLab
 		}
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		if(operationPerformed) { std::cout << "+: "; printChunks(chunks); std::cout << std::endl; }
+		if(operationPerformed && EIGENLAB_DEBUG) { std::cout << "+: "; printChunks(chunks); std::cout << std::endl; }
 #	endif
 #endif
 	}
@@ -1403,27 +1478,40 @@ namespace EigenLab
 		if(chunks.size() < 3) return;
 		typename ChunkArray::iterator rhs = chunks.end() - 1, op = rhs - 1, lhs = op - 1;
 		for(; op != chunks.begin() && rhs != chunks.begin();) {
-			if(op->type == OPERATOR && op->field == "=" && (lhs->type == VALUE || lhs->type == VARIABLE) && (rhs->type == VALUE || rhs->type == VARIABLE)) {
+			if(op->type == OPERATOR && op->field == "=") {
+				if((lhs->type != VALUE && lhs->type != VARIABLE) || (rhs->type != VALUE && rhs->type != VARIABLE)) {
+					throw std::runtime_error("Attempted invalid assignment '" + lhs->field + op->field + rhs->field + "'.");
+				}
 				if(rhs->type == VARIABLE) {
 					if(!isVariable(rhs->field))
 						throw std::runtime_error("Attempted operation '" + lhs->field + op->field + rhs->field + "' on uninitialized variable '" + rhs->field + "'.");
 					rhs->value.setShared(mVariables[rhs->field]);
 				}
 				if(lhs->type == VALUE) {
-					lhs->value.local() = rhs->value.matrix();
-					lhs->value.mapLocal();
+					// Nonsensical
+					throw std::runtime_error("Attempted assignment to non-lvalue '" + lhs->field + "' from '" + rhs->field + "'.");
+					//lhs->value.local() = rhs->value.matrix();
+					//lhs->value.mapLocal();
 				} else { //if(lhs->type == VARIABLE) {
 					if(isVariable(lhs->field)) {
 						lhs->value.setShared(mVariables[lhs->field]);
 						if(lhs->row0 == -1) {
-							if(lhs->value.matrix().rows() == rhs->value.matrix().rows() && lhs->value.matrix().cols() == rhs->value.matrix().cols()) {
+							if(lhs->value.matrix().rows() == rhs->value.matrix().rows() &&
+							   lhs->value.matrix().cols() == rhs->value.matrix().cols()) {
 								lhs->value.matrix() = rhs->value.matrix();
 							} else {
 								mVariables[lhs->field].local() = rhs->value.matrix();
 								mVariables[lhs->field].mapLocal();
 							}
 						} else { //if(lhs->row0 != -1) {
+							if (lhs->rows != rhs->value.matrix().rows() || lhs->cols != rhs->value.matrix().cols())
+								throw std::runtime_error("Attempted assigment of sub-matrix '" + lhs->field + "' from wrong sized source '" + rhs->field + "'.");
+							if (!isBlockValid(lhs->value.matrix(), lhs))
+								throw std::runtime_error("Invalid submatrix bounds '" + lhs->field + "'.");
 							lhs->value.matrix().block(lhs->row0, lhs->col0, lhs->rows, lhs->cols) = rhs->value.matrix();
+							lhs->value.local() = rhs->value.matrix();
+							lhs->value.mapLocal();
+							lhs->type = VALUE;
 						}
 					} else {
 						mVariables[lhs->field].local() = rhs->value.matrix();
@@ -1432,7 +1520,7 @@ namespace EigenLab
 				}
 				rhs = chunks.erase(op, rhs + 1);
 				op = (rhs != chunks.begin()) ? rhs - 1 : rhs;
-				if (op != chunks.begin()) lhs = op - 1;
+				if(op != chunks.begin()) lhs = op - 1;
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
 				operationPerformed = true;
@@ -1441,12 +1529,12 @@ namespace EigenLab
 			} else {
 				rhs = op;
 				op = lhs;
-				lhs--;
+				if(op != chunks.begin()) lhs = op - 1;
 			}
 		}
 #ifdef DEBUG
 #	ifdef EIGENLAB_DEBUG
-		if(operationPerformed) { std::cout << "=: "; printChunks(chunks); std::cout << std::endl; }
+		if(operationPerformed && EIGENLAB_DEBUG) { std::cout << "=: "; printChunks(chunks); std::cout << std::endl; }
 #	endif
 #endif
 	}
@@ -1474,6 +1562,9 @@ namespace EigenLab
 					break;
 				case FUNCTION:
 					std::cout << "f()=" << it->field;
+					break;
+				case NONE:
+					std::cout << "<void>" << it->field;
 					break;
 			}
 			std::cout << "__";
@@ -1934,7 +2025,16 @@ namespace EigenLab
 		resultMatrix = a34.block(1, 2, 2, 2);
 		if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
-		
+
+		try {
+			std::cout << "Test invalid submatrix block access: a(1:2,2:8)";
+			resultValue = eval("a(1:2,2:8)"); // <-- Should NOT succeed!!!
+			std::cout << "FAIL" << std::endl; ++numFails;
+		} catch(std::runtime_error &err) {
+			std::cout << err.what() << std::endl;
+			std::cout << "Exception caught, so we're OK" << std::endl;
+		}
+
 		std::cout << "Test submatrix block access using 'end' and ':' identifiers a(i:end,:): ";
 		resultValue = eval("a(1:end,:)");
 		resultMatrix = a34.block(1, 0, a34.rows() - 1, a34.cols());
@@ -2288,6 +2388,38 @@ namespace EigenLab
 		if(a34.block(0,1,2,2).isApprox(var("x").matrix())) std::cout << "OK" << std::endl;
 		else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
+		std::cout << "Test assigning to a constant 1 = 3: ";
+		try {
+			resultValue = eval("1 = 3");
+            std::cout << "FAIL" << std::endl; ++numFails;
+		} catch(std::runtime_error &err) {
+            std::cout << err.what() << std::endl;
+            std::cout << "Exception caught, so we're OK" << std::endl;
+        }
+
+		std::cout << "Test assigning to a mis-sized submatrix block a(0:1,1:2) = [1,2,3]: ";
+		try {
+			resultValue = eval("a(0:1,1:2) = [1,2,3]");
+            std::cout << "FAIL" << std::endl; ++numFails;
+		} catch(std::runtime_error &err) {
+            std::cout << err.what() << std::endl;
+            std::cout << "Exception caught, so we're OK" << std::endl;
+        }
+
+		std::cout << "Test chained assignment x = a(0:1,1:2) = [5,6;7,8]: ";
+		resultValue = eval("x = a(0:1,1:2) = [5,6;7,8]");
+		if(a34.block(0,1,2,2).isApprox(var("x").matrix()) &&
+		   var("x").matrix().isApprox(resultValue.matrix()) &&
+		   a34.block(0,1,2,2).isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
+		std::cout << "Test chained assignment a(0:1,1:2) = x = [2,8;5,4]: ";
+		resultValue = eval("a(0:1,1:2) = x = [2,8;5,4]");
+		if(a34.block(0,1,2,2).isApprox(var("x").matrix()) &&
+		   var("x").matrix().isApprox(resultValue.matrix()) &&
+		   a34.block(0,1,2,2).isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+		else { std::cout << "FAIL" << std::endl; ++numFails; }
+
         try {
             std::cout << "Test bad function call: ";
             resultValue = eval("foobar(-3)"); // <-- Should NOT succeed!!!

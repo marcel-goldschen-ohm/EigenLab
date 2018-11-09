@@ -19,7 +19,7 @@ addons:
 
 env:
   - EIGEN_VERSION=3.2.10
-  - EIGEN_VERSION=3.3.3
+  - EIGEN_VERSION=3.3.4
 
 before_install:
   - ${CXX} --version;
