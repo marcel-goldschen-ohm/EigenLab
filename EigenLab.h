@@ -664,7 +664,7 @@ namespace EigenLab
 				} else {
 					submatrix = eval(cols[j]);
 				}
-				if(j > 0 && size_t(submatrix.matrix().cols()) != nrows)
+				if(j > 0 && size_t(submatrix.matrix().rows()) != nrows)
 					throw std::runtime_error("Invalid matrix definition '[" + str + "]'. Successive column entries '" + cols[int(j) - 1] + "' and '" + cols[j] + "' do not have the same number of rows.");
 				nrows = submatrix.matrix().rows();
 				ncols += submatrix.matrix().cols();
