@@ -681,7 +681,7 @@ namespace EigenLab
 			row0 += nrows;
 		}
 		nrows = temp.size();
-		if(nrows == 0) return;
+		//if(nrows == 0) return;
 		ncols = temp[0].size();
 		mat.setLocal(Derived(nrows, ncols));
 		for(size_t row = 0; row < nrows; row++) {
@@ -893,7 +893,7 @@ namespace EigenLab
                 if(arg.matrix().size() != 1)
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
                 long double N = floor(std::real(arg.matrix()(0, 0)));
-                if(N <= 0 || N != std::real(arg.matrix()(0, 0)))
+                if(N < 0 || N != std::real(arg.matrix()(0, 0)))
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
 				if (N*N > EIGENLAB_MAXMATRIX)
 					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(N) + "^2' set EIGENLAB_MAXMATRIX to allow larger matrices.");
@@ -905,7 +905,7 @@ namespace EigenLab
                 if(arg.matrix().size() != 1)
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
                 long double N = floor(std::real(arg.matrix()(0, 0)));
-                if(N <= 0 || N != std::real(arg.matrix()(0, 0)))
+                if(N < 0 || N != std::real(arg.matrix()(0, 0)))
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
 				if (N*N > EIGENLAB_MAXMATRIX)
 					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(N) + "^2' set EIGENLAB_MAXMATRIX to allow larger matrices.");
@@ -916,7 +916,7 @@ namespace EigenLab
                 if(arg.matrix().size() != 1)
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
                 long double N = floor(std::real(arg.matrix()(0, 0)));
-				if(N <= 0 || N != std::real(arg.matrix()(0, 0)))
+				if(N < 0 || N != std::real(arg.matrix()(0, 0)))
                     throw std::runtime_error("Invalid dimension argument for function '" + name + "(" + args[0] + ")'.");
 				if (N*N > EIGENLAB_MAXMATRIX)
 					throw std::runtime_error("Invalid matrix size requested '" + std::to_string(N) + "^2' set EIGENLAB_MAXMATRIX to allow larger matrices.");
@@ -995,7 +995,7 @@ namespace EigenLab
                     throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
                 long int rows = floor(std::real(arg0.matrix()(0, 0)));
                 long int cols = floor(std::real(arg1.matrix()(0, 0)));
-                if(rows <= 0 || cols <= 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)) || (long double)rows*cols > EIGENLAB_MAXMATRIX)
+                if(rows < 0 || cols < 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)) || (long double)rows*cols > EIGENLAB_MAXMATRIX)
                     throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
                 result.local() = Derived::Zero(rows, cols);
                 result.mapLocal();
@@ -1005,7 +1005,7 @@ namespace EigenLab
                     throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
                 long int rows = floor(std::real(arg0.matrix()(0, 0)));
                 long int cols = floor(std::real(arg1.matrix()(0, 0)));
-                if(rows <= 0 || cols <= 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)) || (long double)rows*cols > EIGENLAB_MAXMATRIX)
+                if(rows < 0 || cols < 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)) || (long double)rows*cols > EIGENLAB_MAXMATRIX)
                     throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
                 result.local() = Derived::Ones(rows, cols);
                 result.mapLocal();
@@ -1015,7 +1015,7 @@ namespace EigenLab
                     throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
                 long int rows = floor(std::real(arg0.matrix()(0, 0)));
                 long int cols = floor(std::real(arg1.matrix()(0, 0)));
-                if(rows <= 0 || cols <= 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)) || (long double)rows*cols > EIGENLAB_MAXMATRIX)
+                if(rows < 0 || cols < 0 || rows != std::real(arg0.matrix()(0, 0)) || cols != std::real(arg1.matrix()(0, 0)) || (long double)rows*cols > EIGENLAB_MAXMATRIX)
                     throw std::runtime_error("Invalid dimension arguments for function '" + name + "(" + args[0] + "," + args[1] + ")'.");
                 result.local() = Derived::Identity(rows, cols);
                 result.mapLocal();
@@ -2309,19 +2309,37 @@ namespace EigenLab
         resultMatrix = Derived::Zero(5, 5);
         if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
         else { std::cout << "FAIL" << std::endl; ++numFails; }
-        
+
+		std::cout << "Test zeros(0): ";
+        resultValue = eval("zeros(0)");
+        resultMatrix = Derived::Zero(0, 0);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+
         std::cout << "Test ones(5): ";
         resultValue = eval("ones(5)");
         resultMatrix = Derived::Ones(5, 5);
         if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
         else { std::cout << "FAIL" << std::endl; ++numFails; }
-        
+
+		std::cout << "Test ones(0): ";
+        resultValue = eval("ones(0)");
+        resultMatrix = Derived::Ones(0, 0);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+
         std::cout << "Test eye(5): ";
         resultValue = eval("eye(5)");
         resultMatrix = Derived::Identity(5, 5);
         if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
         else { std::cout << "FAIL" << std::endl; ++numFails; }
         
+        std::cout << "Test eye(0): ";
+        resultValue = eval("eye(0)");
+        resultMatrix = Derived::Identity(0, 0);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+
         try {
             std::cout << "Test zeros(5.2): ";
             resultValue = eval("zeros(5.2)"); // <-- Should NOT succeed!!!
@@ -2346,15 +2364,51 @@ namespace EigenLab
         if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
         else { std::cout << "FAIL" << std::endl; ++numFails; }
         
+        std::cout << "Test zeros(0,7): ";
+        resultValue = eval("zeros(0,7)");
+        resultMatrix = Derived::Zero(0, 7);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+        
+        std::cout << "Test zeros(4,0): ";
+        resultValue = eval("zeros(4,0)");
+        resultMatrix = Derived::Zero(4, 0);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+        
         std::cout << "Test ones(4,7): ";
         resultValue = eval("ones(4,7)");
         resultMatrix = Derived::Ones(4, 7);
         if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
         else { std::cout << "FAIL" << std::endl; ++numFails; }
         
+        std::cout << "Test ones(0,7): ";
+        resultValue = eval("ones(0,7)");
+        resultMatrix = Derived::Ones(0, 7);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+        
+        std::cout << "Test ones(4,0): ";
+        resultValue = eval("ones(4,0)");
+        resultMatrix = Derived::Ones(4, 0);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+        
         std::cout << "Test eye(4,7): ";
         resultValue = eval("eye(4,7)");
         resultMatrix = Derived::Identity(4, 7);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+		
+        std::cout << "Test eye(0,7): ";
+        resultValue = eval("eye(0,7)");
+        resultMatrix = Derived::Identity(0, 7);
+        if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
+        else { std::cout << "FAIL" << std::endl; ++numFails; }
+		
+        std::cout << "Test eye(4,0): ";
+        resultValue = eval("eye(4,0)");
+        resultMatrix = Derived::Identity(4, 0);
         if(resultMatrix.isApprox(resultValue.matrix())) std::cout << "OK" << std::endl;
         else { std::cout << "FAIL" << std::endl; ++numFails; }
 		
