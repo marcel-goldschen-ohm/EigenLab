@@ -1,6 +1,6 @@
 EigenLab
 ===
-[![Build Status](https://travis-ci.org/marcel-goldschen-ohm/EigenLab.svg?branch=master)](https://travis-ci.org/marcel-goldschen-ohm/EigenLab)
+[![Build Status](https://github.com/marcel-goldschen-ohm/EigenLab/actions/workflows/ci.yml/badge.svg)](https://github.com/marcel-goldschen-ohm/EigenLab/actions/workflows/ci.yml)
 
 C++ header only library for parsing/evaluating matrix math equations which are unknown until run time (e.g. user input) in a format similar to [MATLAB](http://www.mathworks.com/products/matlab). Variables can be defined via the parsed equations as in MATLAB, or alternatively mapped to preallocated data. Matrix math is performed using [Eigen](http://eigen.tuxfamily.org). Supports basic matrix operations, matrix reductions, submatrix indexing as in MATLAB (except indices are 0 based), coefficient-wise operations and coefficient-wise function evaluation. This allows the user to evaluate matrix math equations in an interactive fashion like in MATLAB, or, for example, to fit a data set using an arbitrary function defined by the user at run time. Finally, EigenLab's interface is incredibly simple and easy to use. Check out the Quick Start Examples seciton and see below for a taste of what EigenLab is capable of.
 
@@ -53,7 +53,7 @@ Finally, it is of course possible to embed in your C++ program an interpreted la
 ---
 All of EigenLab is in the single header file `EigenLab.h`. Just include it.
 
-EigenLab requires the header only C++ library [Eigen](http://eigen.tuxfamily.org) (tested with version 3.2.2) for matrix math. Either make sure Eigen is in your searched include paths, or change the include statement in `EigenLab.h` from `#include <Eigen/Dense>` to `#include <YOUR/PATH/TO/Eigen/Dense>`.
+EigenLab requires the header only C++ library [Eigen](http://eigen.tuxfamily.org) (tested with versions 3.2, 3.3, 3.4 and 5.0; Eigen 5 requires C++14) for matrix math. Either make sure Eigen is in your searched include paths, or change the include statement in `EigenLab.h` from `#include <Eigen/Dense>` to `#include <YOUR/PATH/TO/Eigen/Dense>`.
 
 ### LICENSE
 ---

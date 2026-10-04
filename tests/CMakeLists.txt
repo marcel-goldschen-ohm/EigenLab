@@ -2,15 +2,16 @@
 # CMake for EigenLab
 #
 
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.10...3.31)
 
 project (EigenLab CXX)
 
 option (BUILD_FUZZ "Build binaries with tooling for fuzzing." OFF)
-set (EIGEN_VERSION "3.3.4" CACHE STRING "Select Eigen Version.")
+set (EIGEN_VERSION "5.0.1" CACHE STRING "Select Eigen Version.")
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 message ("Testing EigenLab against Eigen-${EIGEN_VERSION}")
 
@@ -20,7 +21,7 @@ message ("Testing EigenLab against Eigen-${EIGEN_VERSION}")
 include (ExternalProject)
 ExternalProject_Add (eigenX
   PREFIX eigenX
-  URL http://bitbucket.org/eigen/eigen/get/${EIGEN_VERSION}.tar.bz2
+  URL https://gitlab.com/libeigen/eigen/-/archive/${EIGEN_VERSION}/eigen-${EIGEN_VERSION}.tar.bz2
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
   INSTALL_COMMAND ""
